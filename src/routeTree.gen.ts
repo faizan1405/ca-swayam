@@ -11,18 +11,18 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ConsultationRouteImport } from './routes/consultation'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as AdminLayoutRouteImport } from './routes/admin/_layout'
 import { Route as AdminAccountRouteImport } from './routes/admin/account'
 import { Route as AdminConsultationsRouteImport } from './routes/admin/consultations'
 import { Route as AdminContactEntriesRouteImport } from './routes/admin/contact-entries'
-import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminServicesRouteImport } from './routes/admin/services'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminTestimonialsRouteImport } from './routes/admin/testimonials'
+import { Route as AdminLoginRouteImport } from './routes/admin_.login'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -32,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConsultationRoute = ConsultationRouteImport.update({
@@ -50,65 +55,60 @@ const ServicesRoute = ServicesRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminLayoutRoute = AdminLayoutRouteImport.update({
-  id: '/admin/_layout',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminAccountRoute = AdminAccountRouteImport.update({
-  id: '/admin/account',
-  path: '/admin/account',
-  getParentRoute: () => rootRouteImport,
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminConsultationsRoute = AdminConsultationsRouteImport.update({
-  id: '/admin/consultations',
-  path: '/admin/consultations',
-  getParentRoute: () => rootRouteImport,
+  id: '/consultations',
+  path: '/consultations',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminContactEntriesRoute = AdminContactEntriesRouteImport.update({
-  id: '/admin/contact-entries',
-  path: '/admin/contact-entries',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminLoginRoute = AdminLoginRouteImport.update({
-  id: '/admin/login',
-  path: '/admin/login',
-  getParentRoute: () => rootRouteImport,
+  id: '/contact-entries',
+  path: '/contact-entries',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminServicesRoute = AdminServicesRouteImport.update({
-  id: '/admin/services',
-  path: '/admin/services',
-  getParentRoute: () => rootRouteImport,
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
-  id: '/admin/settings',
-  path: '/admin/settings',
-  getParentRoute: () => rootRouteImport,
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminTestimonialsRoute = AdminTestimonialsRouteImport.update({
-  id: '/admin/testimonials',
-  path: '/admin/testimonials',
+  id: '/testimonials',
+  path: '/testimonials',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin_/login',
+  path: '/admin/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRouteWithChildren
   '/consultation': typeof ConsultationRoute
   '/contact': typeof ContactRoute
   '/services': typeof ServicesRoute
-  '/admin': typeof AdminLayoutRoute
   '/admin/account': typeof AdminAccountRoute
   '/admin/consultations': typeof AdminConsultationsRoute
   '/admin/contact-entries': typeof AdminContactEntriesRoute
-  '/admin/login': typeof AdminLoginRoute
   '/admin/services': typeof AdminServicesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/admin/login': typeof AdminLoginRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -117,30 +117,30 @@ export interface FileRoutesByTo {
   '/consultation': typeof ConsultationRoute
   '/contact': typeof ContactRoute
   '/services': typeof ServicesRoute
-  '/admin': typeof AdminIndexRoute
   '/admin/account': typeof AdminAccountRoute
   '/admin/consultations': typeof AdminConsultationsRoute
   '/admin/contact-entries': typeof AdminContactEntriesRoute
-  '/admin/login': typeof AdminLoginRoute
   '/admin/services': typeof AdminServicesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRouteWithChildren
   '/consultation': typeof ConsultationRoute
   '/contact': typeof ContactRoute
   '/services': typeof ServicesRoute
-  '/admin/_layout': typeof AdminLayoutRoute
   '/admin/account': typeof AdminAccountRoute
   '/admin/consultations': typeof AdminConsultationsRoute
   '/admin/contact-entries': typeof AdminContactEntriesRoute
-  '/admin/login': typeof AdminLoginRoute
   '/admin/services': typeof AdminServicesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/admin_/login': typeof AdminLoginRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -148,17 +148,17 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/admin'
     | '/consultation'
     | '/contact'
     | '/services'
-    | '/admin'
     | '/admin/account'
     | '/admin/consultations'
     | '/admin/contact-entries'
-    | '/admin/login'
     | '/admin/services'
     | '/admin/settings'
     | '/admin/testimonials'
+    | '/admin/login'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -167,47 +167,40 @@ export interface FileRouteTypes {
     | '/consultation'
     | '/contact'
     | '/services'
-    | '/admin'
     | '/admin/account'
     | '/admin/consultations'
     | '/admin/contact-entries'
-    | '/admin/login'
     | '/admin/services'
     | '/admin/settings'
     | '/admin/testimonials'
+    | '/admin/login'
+    | '/admin'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/admin'
     | '/consultation'
     | '/contact'
     | '/services'
-    | '/admin/_layout'
     | '/admin/account'
     | '/admin/consultations'
     | '/admin/contact-entries'
-    | '/admin/login'
     | '/admin/services'
     | '/admin/settings'
     | '/admin/testimonials'
+    | '/admin_/login'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AdminRoute: typeof AdminRouteWithChildren
   ConsultationRoute: typeof ConsultationRoute
   ContactRoute: typeof ContactRoute
   ServicesRoute: typeof ServicesRoute
-  AdminLayoutRoute: typeof AdminLayoutRoute
-  AdminAccountRoute: typeof AdminAccountRoute
-  AdminConsultationsRoute: typeof AdminConsultationsRoute
-  AdminContactEntriesRoute: typeof AdminContactEntriesRoute
   AdminLoginRoute: typeof AdminLoginRoute
-  AdminServicesRoute: typeof AdminServicesRoute
-  AdminSettingsRoute: typeof AdminSettingsRoute
-  AdminTestimonialsRoute: typeof AdminTestimonialsRoute
-  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -224,6 +217,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/consultation': {
@@ -249,85 +249,93 @@ declare module '@tanstack/react-router' {
     }
     '/admin/': {
       id: '/admin/'
-      path: '/admin'
+      path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/_layout': {
-      id: '/admin/_layout'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminLayoutRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/account': {
       id: '/admin/account'
-      path: '/admin/account'
+      path: '/account'
       fullPath: '/admin/account'
       preLoaderRoute: typeof AdminAccountRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/consultations': {
       id: '/admin/consultations'
-      path: '/admin/consultations'
+      path: '/consultations'
       fullPath: '/admin/consultations'
       preLoaderRoute: typeof AdminConsultationsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/contact-entries': {
       id: '/admin/contact-entries'
-      path: '/admin/contact-entries'
+      path: '/contact-entries'
       fullPath: '/admin/contact-entries'
       preLoaderRoute: typeof AdminContactEntriesRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/admin/login': {
-      id: '/admin/login'
+    '/admin/services': {
+      id: '/admin/services'
+      path: '/services'
+      fullPath: '/admin/services'
+      preLoaderRoute: typeof AdminServicesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/testimonials': {
+      id: '/admin/testimonials'
+      path: '/testimonials'
+      fullPath: '/admin/testimonials'
+      preLoaderRoute: typeof AdminTestimonialsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin_/login': {
+      id: '/admin_/login'
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/services': {
-      id: '/admin/services'
-      path: '/admin/services'
-      fullPath: '/admin/services'
-      preLoaderRoute: typeof AdminServicesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/settings': {
-      id: '/admin/settings'
-      path: '/admin/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AdminSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/testimonials': {
-      id: '/admin/testimonials'
-      path: '/admin/testimonials'
-      fullPath: '/admin/testimonials'
-      preLoaderRoute: typeof AdminTestimonialsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
-  ConsultationRoute: ConsultationRoute,
-  ContactRoute: ContactRoute,
-  ServicesRoute: ServicesRoute,
-  AdminLayoutRoute: AdminLayoutRoute,
+interface AdminRouteChildren {
+  AdminAccountRoute: typeof AdminAccountRoute
+  AdminConsultationsRoute: typeof AdminConsultationsRoute
+  AdminContactEntriesRoute: typeof AdminContactEntriesRoute
+  AdminServicesRoute: typeof AdminServicesRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminTestimonialsRoute: typeof AdminTestimonialsRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
   AdminAccountRoute: AdminAccountRoute,
   AdminConsultationsRoute: AdminConsultationsRoute,
   AdminContactEntriesRoute: AdminContactEntriesRoute,
-  AdminLoginRoute: AdminLoginRoute,
   AdminServicesRoute: AdminServicesRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminTestimonialsRoute: AdminTestimonialsRoute,
   AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  AdminRoute: AdminRouteWithChildren,
+  ConsultationRoute: ConsultationRoute,
+  ContactRoute: ContactRoute,
+  ServicesRoute: ServicesRoute,
+  AdminLoginRoute: AdminLoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

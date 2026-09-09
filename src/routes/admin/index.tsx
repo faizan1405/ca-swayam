@@ -38,11 +38,11 @@ function DashboardPage() {
         const { getAdminStats } = await import("@/lib/backend/admin");
         const data = await getAdminStats();
         setStats({
-          services: data.services,
-          testimonials: data.testimonials,
-          pendingConsultations: data.pendingConsultations,
-          confirmedConsultations: data.confirmedConsultations,
-          contactEntries: data.contactTotal ?? 0,
+          services: toCount(data.services),
+          testimonials: toCount(data.testimonials),
+          pendingConsultations: toCount(data.pendingConsultations),
+          confirmedConsultations: toCount(data.confirmedConsultations),
+          contactEntries: toCount(data.contactTotal),
         });
       } catch {
         toast.error("Failed to load dashboard stats");
@@ -236,4 +236,9 @@ function QuickAction({ to, label }: { to: string; label: string }) {
 function formatDate(d: string | Date): string {
   const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
+function toCount(value: unknown): number {
+  const count = Number(value ?? 0);
+  return Number.isFinite(count) && count >= 0 ? count : 0;
 }

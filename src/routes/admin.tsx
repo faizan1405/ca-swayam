@@ -33,15 +33,8 @@ function AdminLayout() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const router = useRouter();
-
-  const isLoginPage = router.state.location.pathname === "/admin/login";
 
   useEffect(() => {
-    if (isLoginPage) {
-      setLoading(false);
-      return;
-    }
     import("@/lib/backend/admin").then(({ getAdminSession }) =>
       getAdminSession()
         .then((s) => {
@@ -52,7 +45,7 @@ function AdminLayout() {
         })
         .finally(() => setLoading(false)),
     );
-  }, [isLoginPage]);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -71,14 +64,10 @@ function AdminLayout() {
     );
   }
 
-  if (isLoginPage) {
-    return <Outlet />;
-  }
-
   if (!session) return null;
 
   return (
-    <div className="flex min-h-screen bg-[var(--color-background)]">
+    <div className="min-h-screen overflow-x-hidden bg-[var(--color-background)]">
       <Toaster position="top-right" richColors />
 
       {/* Mobile overlay */}
@@ -97,7 +86,7 @@ function AdminLayout() {
           bg-[var(--sidebar-bg)]
           text-[var(--sidebar-text)]
           transition-transform duration-300 ease-in-out
-          lg:translate-x-0 lg:static lg:z-auto
+          lg:translate-x-0
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
@@ -155,7 +144,7 @@ function AdminLayout() {
       </aside>
 
       {/* Main content area */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-col lg:ml-[var(--sidebar-width)]">
         <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 lg:px-8">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -228,6 +217,6 @@ function NavLink({
   );
 }
 
-export const Route = createFileRoute("/admin/_layout")({
+export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
