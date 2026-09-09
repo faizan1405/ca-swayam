@@ -51,7 +51,7 @@ function ContactEntriesPage() {
       const url = filter === "all"
         ? "/admin/contact-entries"
         : `/admin/contact-entries?status=${filter}`;
-      const data = await getAllContactEntries(new Request(window.location.origin + url)).then((r) => r.json());
+      const data = await getAllContactEntries().then((r) => r.json());
       setItems(data ?? []);
     } catch {
       setItems([]);
@@ -68,12 +68,9 @@ function ContactEntriesPage() {
   const handleMarkRead = async (id: string) => {
     try {
       const { markContactEntryRead } = await import("@/lib/backend/services");
-      await markContactEntryRead(
-        new Request(window.location.origin + `/admin/contact-entries/read?id=${id}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }),
-      );
+      await markContactEntryRead({
+        data: { url: window.location.origin + `/admin/contact-entries/read?id=${id}` },
+      });
       setItems(prev => prev.map(item =>
         item.id === id ? { ...item, isRead: true } : item
       ));
@@ -87,11 +84,9 @@ function ContactEntriesPage() {
     if (!confirm("Delete this contact entry? This cannot be undone.")) return;
     try {
       const { deleteContactEntry } = await import("@/lib/backend/services");
-      await deleteContactEntry(
-        new Request(window.location.origin + `/admin/contact-entries?id=${id}`, {
-          method: "DELETE",
-        }),
-      );
+      await deleteContactEntry({
+        data: { url: window.location.origin + `/admin/contact-entries?id=${id}` },
+      });
       setItems(prev => prev.filter(item => item.id !== id));
       toast.success("Entry deleted");
     } catch {

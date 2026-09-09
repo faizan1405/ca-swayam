@@ -52,9 +52,7 @@ function DashboardPage() {
     const loadRecent = async () => {
       try {
         const { getAllTestimonials } = await import("@/lib/backend/testimonials");
-        const res = await getAllTestimonials(
-          new Request(window.location.origin + "/admin/testimonials"),
-        );
+        const res = await getAllTestimonials();
         if (res.ok) {
           const data = await res.json();
           const sorted = (Array.isArray(data) ? data : [])

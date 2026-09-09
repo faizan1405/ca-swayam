@@ -60,9 +60,9 @@ function ConsultationsPage() {
       const { listConsultations } = await import("@/lib/backend/consultations");
       const url =
         filter === "all" ? "/admin/consultations" : `/admin/consultations?status=${filter}`;
-      const data = await listConsultations(new Request(window.location.origin + url)).then((r) =>
-        r.json(),
-      );
+      const data = await listConsultations({
+        data: { url: window.location.origin + url },
+      }).then((r) => r.json());
       setItems(data.items ?? []);
     } catch {
       setItems([]);
@@ -78,24 +78,21 @@ function ConsultationsPage() {
 
   const handleStatusChange = async (id: string, status: Consultation["status"]) => {
     const { updateConsultationStatus } = await import("@/lib/backend/consultations");
-    await updateConsultationStatus(
-      new Request(window.location.origin + `/admin/consultations?id=${id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      }),
-    );
+    await updateConsultationStatus({
+      data: {
+        url: window.location.origin + `/admin/consultations?id=${id}`,
+        body: { status },
+      },
+    });
     await load();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this consultation? This cannot be undone.")) return;
     const { deleteConsultation } = await import("@/lib/backend/consultations");
-    await deleteConsultation(
-      new Request(window.location.origin + `/admin/consultations?id=${id}`, {
-        method: "DELETE",
-      }),
-    );
+    await deleteConsultation({
+      data: { url: window.location.origin + `/admin/consultations?id=${id}` },
+    });
     await load();
   };
 

@@ -70,7 +70,7 @@ function ConsultationPage() {
   const dates = useMemo(() => getAvailableDates(), []);
 
   useEffect(() => {
-    listFormats(new Request(window.location.href))
+    listFormats()
       .then((res) => res.json())
       .then((data: Format[]) => {
         if (Array.isArray(data) && data.length > 0) {
@@ -132,19 +132,17 @@ function ConsultationPage() {
     setError("");
     setSubmitting(true);
     try {
-      const res = await submitConsultation(
-        new Request(window.location.href, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      const res = await submitConsultation({
+        data: {
+          body: {
             name,
             contact,
             formatId: format.id,
             date: selectedDate.toISOString(),
             time: selectedTime,
-          }),
-        }),
-      );
+          },
+        },
+      });
       if (res.ok) {
         setStep("payment");
       } else {

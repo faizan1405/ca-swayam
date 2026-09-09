@@ -26,7 +26,7 @@ function LoginPage() {
 
   useEffect(() => {
     import("@/lib/backend/admin").then(({ getAdminSession }) =>
-      getAdminSession(new Request(window.location.href))
+      getAdminSession()
         .then((s) => {
           if (s) window.location.href = "/admin";
         })
@@ -41,13 +41,9 @@ function LoginPage() {
 
     try {
       const { adminLogin } = await import("@/lib/backend/admin");
-      const response = await adminLogin(
-        new Request(window.location.href, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        }),
-      );
+      const response = await adminLogin({
+        data: { body: { email, password } },
+      });
 
       const data = await response.json();
       if (!response.ok) {

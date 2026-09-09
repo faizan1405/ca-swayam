@@ -86,7 +86,7 @@ function SettingsPage() {
     setLoading(true);
     try {
       const { getAllSettings } = await import("@/lib/backend/settings");
-      const res = await getAllSettings(new Request(window.location.origin + "/admin/settings"));
+      const res = await getAllSettings();
       if (res.ok) {
         const data = await res.json();
         setSettings(data ?? {});
@@ -124,13 +124,9 @@ function SettingsPage() {
       const meta = settings[key];
       const url = new URL(window.location.origin + "/admin/settings");
       url.searchParams.set("key", key);
-      await updateSetting(
-        new Request(url.toString(), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ value, type: meta?.type ?? "text" }),
-        }),
-      );
+      await updateSetting({
+        data: { url: url.toString(), body: { value, type: meta?.type ?? "text" } },
+      });
       await load();
       setEditing((e) => {
         const next = { ...e };
@@ -150,13 +146,9 @@ function SettingsPage() {
     setAvailabilityLoading(true);
     try {
       const { updateAvailabilityStatus } = await import("@/lib/backend/siteInfo");
-      const res = await updateAvailabilityStatus(
-        new Request(window.location.origin + "/admin/settings/availability", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isActive: checked }),
-        }),
-      );
+      const res = await updateAvailabilityStatus({
+        data: { body: { isActive: checked } },
+      });
       if (res.ok) {
         toast.success(checked ? "CA is now Online / Active" : "CA is now Inactive / Offline");
       } else {

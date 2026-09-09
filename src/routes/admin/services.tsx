@@ -75,9 +75,7 @@ function ServicesPage() {
     setLoading(true);
     try {
       const { getAllServices } = await import("@/lib/backend/services");
-      const res = await getAllServices(
-        new Request(window.location.origin + "/admin/services"),
-      );
+      const res = await getAllServices();
       if (res.ok) {
         const data = await res.json();
         setItems(Array.isArray(data) ? data : []);
@@ -122,23 +120,11 @@ function ServicesPage() {
         const { updateService } = await import("@/lib/backend/services");
         const url = new URL(window.location.origin + "/admin/services");
         url.searchParams.set("id", editingId);
-        await updateService(
-          new Request(url.toString(), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(form),
-          }),
-        );
+        await updateService({ data: { url: url.toString(), body: form } });
         toast.success("Service updated");
       } else {
         const { createService } = await import("@/lib/backend/services");
-        await createService(
-          new Request(window.location.origin + "/admin/services", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(form),
-          }),
-        );
+        await createService({ data: { body: form } });
         toast.success("Service created");
       }
 
@@ -155,11 +141,9 @@ function ServicesPage() {
     if (!confirm("Delete this service? This cannot be undone.")) return;
     try {
       const { deleteService } = await import("@/lib/backend/services");
-      await deleteService(
-        new Request(window.location.origin + `/admin/services?id=${id}`, {
-          method: "DELETE",
-        }),
-      );
+      await deleteService({
+        data: { url: window.location.origin + `/admin/services?id=${id}` },
+      });
       toast.success("Service deleted");
       await load();
     } catch {
@@ -170,13 +154,12 @@ function ServicesPage() {
   const handleToggle = async (s: Service) => {
     try {
       const { updateService } = await import("@/lib/backend/services");
-      await updateService(
-        new Request(window.location.origin + `/admin/services?id=${s.id}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isActive: !s.isActive }),
-        }),
-      );
+      await updateService({
+        data: {
+          url: window.location.origin + `/admin/services?id=${s.id}`,
+          body: { isActive: !s.isActive },
+        },
+      });
       toast.success(s.isActive ? "Service hidden from website" : "Service published to website");
       await load();
     } catch {

@@ -1,10 +1,12 @@
-import { eq, desc, count, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
+import { createServerFn } from "@tanstack/react-start";
 import { db, consultations, consultationFormats } from "../db";
 import { getSession } from "../auth";
+import { buildServerRequest, serverRequestInputSchema } from "../server-request";
 
 // Public submit (no auth) — used by the consultation page
-export async function submitConsultation(request: Request) {
+async function submitConsultationHandler(request: Request) {
   const body = await request.json();
   const parsed = consultationSubmitSchema.safeParse(body);
   if (!parsed.success) {
@@ -19,6 +21,37 @@ export async function submitConsultation(request: Request) {
     return Response.json({ error: "Invalid consultation format" }, { status: 400 });
   }
 
+  const consultationDate = new Date(parsed.data.date);
+  if (Number.isNaN(consultationDate.getTime())) {
+    return Response.json({ error: "Invalid consultation date" }, { status: 400 });
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (consultationDate < today) {
+    return Response.json({ error: "Consultation date cannot be in the past" }, { status: 400 });
+  }
+
+  const duplicateWindow = new Date(Date.now() - 60_000);
+  const [recentDuplicate] = await db
+    .select({ id: consultations.id })
+    .from(consultations)
+    .where(
+      and(
+        eq(consultations.contact, parsed.data.contact),
+        eq(consultations.formatId, parsed.data.formatId),
+        eq(consultations.date, consultationDate),
+        eq(consultations.time, parsed.data.time),
+        gte(consultations.createdAt, duplicateWindow),
+      ),
+    )
+    .limit(1);
+  if (recentDuplicate) {
+    return Response.json(
+      { error: "This consultation request was already submitted. Please wait before trying again." },
+      { status: 429 },
+    );
+  }
+
   const id = "cons_" + Math.random().toString(36).slice(2);
   const now = new Date();
   const [result] = await db
@@ -28,7 +61,7 @@ export async function submitConsultation(request: Request) {
       name: parsed.data.name,
       contact: parsed.data.contact,
       formatId: parsed.data.formatId,
-      date: new Date(parsed.data.date),
+      date: consultationDate,
       time: parsed.data.time,
       status: "pending",
       note: parsed.data.note ?? null,
@@ -41,7 +74,7 @@ export async function submitConsultation(request: Request) {
 }
 
 // Admin queries
-export async function listConsultations(request: Request) {
+async function listConsultationsHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -67,7 +100,7 @@ export async function listConsultations(request: Request) {
   return Response.json({ items: rows, total: total?.count ?? 0, page, limit });
 }
 
-export async function getConsultationStats(request: Request) {
+async function getConsultationStatsHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -92,7 +125,7 @@ export async function getConsultationStats(request: Request) {
   const [todayRows] = await db
     .select({ count: count() })
     .from(consultations)
-    .where(sql`date(${consultations.createdAt}) = date('now')`);
+    .where(sql`${consultations.createdAt} >= date_trunc('day', now())`);
 
   return Response.json({
     total: all?.count ?? 0,
@@ -104,7 +137,7 @@ export async function getConsultationStats(request: Request) {
   });
 }
 
-export async function updateConsultationStatus(request: Request) {
+async function updateConsultationStatusHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -125,7 +158,7 @@ export async function updateConsultationStatus(request: Request) {
   return Response.json(result);
 }
 
-export async function deleteConsultation(request: Request) {
+async function deleteConsultationHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -137,7 +170,7 @@ export async function deleteConsultation(request: Request) {
   return new Response(null, { status: 204 });
 }
 
-export async function listFormats(request: Request) {
+async function listFormatsHandler() {
   // public — no auth
   const all = await db.select().from(consultationFormats).orderBy(consultationFormats.sortOrder);
   return Response.json(all.filter((f) => f.isActive));
@@ -155,3 +188,27 @@ const consultationSubmitSchema = z.object({
 const updateStatusSchema = z.object({
   status: z.enum(["pending", "confirmed", "cancelled", "completed"]),
 });
+
+export const submitConsultation = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => submitConsultationHandler(buildServerRequest("POST", data)));
+
+export const listConsultations = createServerFn({ method: "GET" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => listConsultationsHandler(buildServerRequest("GET", data)));
+
+export const getConsultationStats = createServerFn({ method: "GET" }).handler(() =>
+  getConsultationStatsHandler(buildServerRequest("GET")),
+);
+
+export const updateConsultationStatus = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => updateConsultationStatusHandler(buildServerRequest("POST", data)));
+
+export const deleteConsultation = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => deleteConsultationHandler(buildServerRequest("POST", data)));
+
+export const listFormats = createServerFn({ method: "GET" }).handler(() =>
+  listFormatsHandler(),
+);

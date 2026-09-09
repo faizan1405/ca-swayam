@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import heroImage from "@/assets/hero-boardroom.jpg";
 import industrialImage from "@/assets/industrial-plans.jpg";
 import auditImage from "@/assets/audit-ledger.jpg";
-import logoAsset from "@/assets/swayam-goyal-logo.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { HeroBanner, Magnetic, Reveal, SectionKicker, AvailabilityBadge } from "@/components/site";
 import { getPublicServices } from "@/lib/backend/services";
 import { getPublicSettings } from "@/lib/backend/settings";
+
+const logoUrl = "/swayam-goyal-logo.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -98,7 +99,7 @@ function HomePage() {
           <Reveal>
             <div className="mb-8 flex items-center gap-4">
               <img
-                src={logoAsset.url}
+                src={logoUrl}
                 alt="Swayam Goyal & Associates"
                 width={360}
                 height={216}

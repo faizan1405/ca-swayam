@@ -10,7 +10,8 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import { Button } from "@/components/ui/button";
-import logoAsset from "@/assets/swayam-goyal-logo.png.asset.json";
+
+const logoUrl = "/swayam-goyal-logo.png";
 
 export type ContactInfo = {
   phoneNumber: string;
@@ -315,7 +316,7 @@ export function SiteHeader({ phoneNumber }: { phoneNumber: string }) {
           aria-label="Swayam Goyal & Associates home"
         >
           <img
-            src={logoAsset.url}
+            src={logoUrl}
             alt="Swayam Goyal & Associates"
             width={360}
             height={216}
@@ -461,7 +462,7 @@ export function SiteFooter({
         <div>
           <div className="inline-flex rounded-2xl bg-background/95 p-4">
             <img
-              src={logoAsset.url}
+              src={logoUrl}
               alt="Swayam Goyal & Associates"
               width={360}
               height={216}

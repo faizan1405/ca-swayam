@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { createServerFn } from "@tanstack/react-start";
 import { db, testimonials, insertTestimonialSchema } from "../db";
 import { getSession } from "../auth";
+import { buildServerRequest, serverRequestInputSchema } from "../server-request";
 
-export async function getAllTestimonials(request: Request) {
+async function getAllTestimonialsHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -11,7 +13,7 @@ export async function getAllTestimonials(request: Request) {
   return Response.json(all);
 }
 
-export async function getTestimonialById(request: Request) {
+async function getTestimonialByIdHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -24,7 +26,7 @@ export async function getTestimonialById(request: Request) {
   return Response.json(result);
 }
 
-export async function createTestimonial(request: Request) {
+async function createTestimonialHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -48,7 +50,7 @@ export async function createTestimonial(request: Request) {
   return Response.json(result, { status: 201 });
 }
 
-export async function updateTestimonial(request: Request) {
+async function updateTestimonialHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -69,7 +71,7 @@ export async function updateTestimonial(request: Request) {
   return Response.json(result);
 }
 
-export async function deleteTestimonial(request: Request) {
+async function deleteTestimonialHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -83,7 +85,7 @@ export async function deleteTestimonial(request: Request) {
 
 // ─── Public (no auth) ────────────────────────────────────────────────────────
 
-export async function getPublicTestimonials() {
+async function getPublicTestimonialsHandler() {
   const all = await db
     .select()
     .from(testimonials)
@@ -97,3 +99,27 @@ const createTestimonialSchema = insertTestimonialSchema.omit({
   createdAt: true,
   updatedAt: true,
 });
+
+export const getAllTestimonials = createServerFn({ method: "GET" }).handler(() =>
+  getAllTestimonialsHandler(buildServerRequest("GET")),
+);
+
+export const getTestimonialById = createServerFn({ method: "GET" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => getTestimonialByIdHandler(buildServerRequest("GET", data)));
+
+export const createTestimonial = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => createTestimonialHandler(buildServerRequest("POST", data)));
+
+export const updateTestimonial = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => updateTestimonialHandler(buildServerRequest("POST", data)));
+
+export const deleteTestimonial = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => deleteTestimonialHandler(buildServerRequest("POST", data)));
+
+export const getPublicTestimonials = createServerFn({ method: "GET" }).handler(() =>
+  getPublicTestimonialsHandler(),
+);

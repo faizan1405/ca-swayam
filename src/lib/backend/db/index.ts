@@ -1,22 +1,19 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
+import "@tanstack/react-start/server-only";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { DATABASE_URL } from "./database-url";
 import * as schema from "./schema";
 
-const DATABASE_URL = process.env["DATABASE_PATH"] || "./src/lib/backend/db/swayam.sqlite";
+// Keep each warm serverless instance to one connection. Use the pooled URL
+// supplied by the Vercel Marketplace integration when the provider offers one.
+const client = postgres(DATABASE_URL, {
+  max: 1,
+  idle_timeout: 20,
+  connect_timeout: 10,
+  prepare: false,
+});
 
-// Ensure the directory exists
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-try {
-  mkdirSync(dirname(DATABASE_URL), { recursive: true });
-} catch {
-  // directory may already exist
-}
-
-const sqlite = new Database(DATABASE_URL);
-sqlite.pragma("journal_mode = WAL");
-
-export const db = drizzle(sqlite, { schema });
+export const db = drizzle(client, { schema });
 
 export type DbType = typeof db;
 

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-type Session = { id: string; email: string; name: string };
+type Session = { adminId: string; email: string; name: string };
 
 export const Route = createFileRoute("/admin/account")({
   head: () => ({ meta: [{ title: "Account | Admin" }] }),
@@ -39,7 +39,7 @@ function AccountPage() {
 
   useEffect(() => {
     import("@/lib/backend/admin").then(({ getAdminSession }) =>
-      getAdminSession(new Request(window.location.href))
+      getAdminSession()
         .then((s) => {
           if (s) {
             setSession(s);
@@ -56,13 +56,9 @@ function AccountPage() {
     setProfileSaving(true);
     try {
       const { updateAdminProfile } = await import("@/lib/backend/admin");
-      const res = await updateAdminProfile(
-        new Request(window.location.href, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email }),
-        }),
-      );
+      const res = await updateAdminProfile({
+        data: { body: { name, email } },
+      });
       const data = await res.json();
       if (!res.ok) {
         setProfileMessage({ type: "error", text: data.error ?? "Failed to update profile" });
@@ -92,13 +88,9 @@ function AccountPage() {
     setPasswordSaving(true);
     try {
       const { changePassword } = await import("@/lib/backend/admin");
-      const res = await changePassword(
-        new Request(window.location.href, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ currentPassword, newPassword }),
-        }),
-      );
+      const res = await changePassword({
+        data: { body: { currentPassword, newPassword } },
+      });
       const data = await res.json();
       if (!res.ok) {
         let message = data.error ?? "Failed to update password";
@@ -201,7 +193,14 @@ function AccountPage() {
           </CardTitle>
           <CardDescription>Choose a new password with at least 8 characters</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleChangePassword();
+            }}
+          >
           <div className="space-y-2">
             <Label htmlFor="currentPassword">Current Password</Label>
             <Input
@@ -248,13 +247,14 @@ function AccountPage() {
 
           <div className="flex justify-end">
             <Button
-              onClick={handleChangePassword}
+              type="submit"
               disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword}
             >
               <Save className="mr-2 h-4 w-4" />
               {passwordSaving ? "Updating…" : "Update password"}
             </Button>
           </div>
+          </form>
         </CardContent>
       </Card>
     </div>

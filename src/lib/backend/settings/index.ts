@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { createServerFn } from "@tanstack/react-start";
 import { db, siteSettings } from "../db";
 import { getSession } from "../auth";
+import { buildServerRequest, serverRequestInputSchema } from "../server-request";
 
-export async function getAllSettings(request: Request) {
+async function getAllSettingsHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -15,7 +17,7 @@ export async function getAllSettings(request: Request) {
   return Response.json(result);
 }
 
-export async function updateSetting(request: Request) {
+async function updateSettingHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -36,7 +38,7 @@ export async function updateSetting(request: Request) {
   return Response.json(result);
 }
 
-export async function getPublicSettings() {
+async function getPublicSettingsHandler() {
   // No auth — public site can read these
   const all = await db.select().from(siteSettings);
   const result: Record<string, { value: string; type: string }> = {};
@@ -50,3 +52,15 @@ const settingUpdateSchema = z.object({
   value: z.string().min(1),
   type: z.enum(["text", "number", "boolean", "json"]).optional(),
 });
+
+export const getAllSettings = createServerFn({ method: "GET" }).handler(() =>
+  getAllSettingsHandler(buildServerRequest("GET")),
+);
+
+export const updateSetting = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => updateSettingHandler(buildServerRequest("POST", data)));
+
+export const getPublicSettings = createServerFn({ method: "GET" }).handler(() =>
+  getPublicSettingsHandler(),
+);

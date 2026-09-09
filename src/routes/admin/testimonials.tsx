@@ -69,9 +69,7 @@ function TestimonialsPage() {
     setLoading(true);
     try {
       const { getAllTestimonials } = await import("@/lib/backend/testimonials");
-      const res = await getAllTestimonials(
-        new Request(window.location.origin + "/admin/testimonials"),
-      );
+      const res = await getAllTestimonials();
       if (res.ok) {
         const data = await res.json();
         setItems(Array.isArray(data) ? data : []);
@@ -115,13 +113,7 @@ function TestimonialsPage() {
       if (editingId) {
         url.searchParams.set("id", editingId);
         const { updateTestimonial } = await import("@/lib/backend/testimonials");
-        await updateTestimonial(
-          new Request(url.toString(), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(form),
-          }),
-        );
+        await updateTestimonial({ data: { url: url.toString(), body: form } });
         toast.success("Testimonial updated");
       } else {
         const payload = {
@@ -131,13 +123,7 @@ function TestimonialsPage() {
           updatedAt: new Date(),
         };
         const { createTestimonial } = await import("@/lib/backend/testimonials");
-        await createTestimonial(
-          new Request(url.toString(), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          }),
-        );
+        await createTestimonial({ data: { url: url.toString(), body: payload } });
         toast.success("Testimonial created");
       }
 
@@ -154,11 +140,9 @@ function TestimonialsPage() {
     if (!confirm("Delete this testimonial? This cannot be undone.")) return;
     try {
       const { deleteTestimonial } = await import("@/lib/backend/testimonials");
-      await deleteTestimonial(
-        new Request(window.location.origin + `/admin/testimonials?id=${id}`, {
-          method: "DELETE",
-        }),
-      );
+      await deleteTestimonial({
+        data: { url: window.location.origin + `/admin/testimonials?id=${id}` },
+      });
       toast.success("Testimonial deleted");
       await load();
     } catch {
@@ -169,13 +153,12 @@ function TestimonialsPage() {
   const handleToggle = async (t: Testimonial) => {
     try {
       const { updateTestimonial } = await import("@/lib/backend/testimonials");
-      await updateTestimonial(
-        new Request(window.location.origin + `/admin/testimonials?id=${t.id}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isActive: !t.isActive }),
-        }),
-      );
+      await updateTestimonial({
+        data: {
+          url: window.location.origin + `/admin/testimonials?id=${t.id}`,
+          body: { isActive: !t.isActive },
+        },
+      });
       toast.success(t.isActive ? "Testimonial hidden from website" : "Testimonial published to website");
       await load();
     } catch {

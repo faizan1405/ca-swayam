@@ -5,23 +5,30 @@
  * All mutations are protected by backend session checks.
  */
 
-import { eq, desc, count, sql } from "drizzle-orm";
+import { createServerFn } from "@tanstack/react-start";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { z } from "zod";
-import { db, services, admins, consultations, contactEntries, insertServiceSchema } from "./db";
+import { db, services, contactEntries, insertServiceSchema } from "./db";
+import { getSession } from "./auth";
+import { buildServerRequest, serverRequestInputSchema } from "./server-request";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 async function ensureAdmin(request: Request) {
-  const sessionId = request.headers.get("x-session-id");
-  if (!sessionId) return null;
-  const [admin] = await db.select().from(admins).where(eq(admins.id, sessionId));
-  if (!admin) return null;
-  return { id: admin.id, email: admin.email, name: admin.name };
+  return getSession(request);
 }
+
+const createServiceSchema = insertServiceSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+const updateServiceSchema = createServiceSchema.partial();
 
 // ─── Services: List ─────────────────────────────────────────────────────────
 
-export async function getAllServices(request: Request) {
+async function getAllServicesHandler(request: Request) {
   const session = await ensureAdmin(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -31,17 +38,14 @@ export async function getAllServices(request: Request) {
 
 // ─── Services: Create ───────────────────────────────────────────────────────
 
-export async function createService(request: Request) {
+async function createServiceHandler(request: Request) {
   const session = await ensureAdmin(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => null);
   if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });
 
-  const parsed = insertServiceSchema.safeParse({
-    ...body,
-    id: "svc_" + Math.random().toString(36).slice(2),
-  });
+  const parsed = createServiceSchema.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
@@ -49,6 +53,7 @@ export async function createService(request: Request) {
   const now = new Date();
   const [result] = await db.insert(services).values({
     ...parsed.data,
+    id: `svc_${crypto.randomUUID()}`,
     createdAt: now,
     updatedAt: now,
   }).returning();
@@ -58,7 +63,7 @@ export async function createService(request: Request) {
 
 // ─── Services: Update ───────────────────────────────────────────────────────
 
-export async function updateService(request: Request) {
+async function updateServiceHandler(request: Request) {
   const session = await ensureAdmin(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -69,8 +74,7 @@ export async function updateService(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });
 
-  const partialSchema = insertServiceSchema.partial();
-  const parsed = partialSchema.safeParse(body);
+  const parsed = updateServiceSchema.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
@@ -87,7 +91,7 @@ export async function updateService(request: Request) {
 
 // ─── Services: Delete ───────────────────────────────────────────────────────
 
-export async function deleteService(request: Request) {
+async function deleteServiceHandler(request: Request) {
   const session = await ensureAdmin(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -101,7 +105,7 @@ export async function deleteService(request: Request) {
 
 // ─── Services: Public (no auth) ─────────────────────────────────────────────
 
-export async function getPublicServices() {
+async function getPublicServicesHandler() {
   const all = await db
     .select()
     .from(services)
@@ -112,7 +116,7 @@ export async function getPublicServices() {
 
 // ─── Contact Entries: Public Submit ─────────────────────────────────────────
 
-export async function submitContactEntry(request: Request) {
+async function submitContactEntryHandler(request: Request) {
   // Public endpoint — no auth required
   const body = await request.json();
   const parsed = contactEntrySchema.safeParse(body);
@@ -128,7 +132,27 @@ export async function submitContactEntry(request: Request) {
     return Response.json({ error: "Preferred date cannot be in the past" }, { status: 400 });
   }
 
-  const id = "cnt_" + Math.random().toString(36).slice(2);
+  const duplicateWindow = new Date(Date.now() - 60_000);
+  const [recentDuplicate] = await db
+    .select({ id: contactEntries.id })
+    .from(contactEntries)
+    .where(
+      and(
+        eq(contactEntries.email, parsed.data.email),
+        eq(contactEntries.phone, parsed.data.phone),
+        eq(contactEntries.message, parsed.data.message),
+        gte(contactEntries.createdAt, duplicateWindow),
+      ),
+    )
+    .limit(1);
+  if (recentDuplicate) {
+    return Response.json(
+      { error: "This enquiry was already submitted. Please wait before trying again." },
+      { status: 429 },
+    );
+  }
+
+  const id = `cnt_${crypto.randomUUID()}`;
   const now = new Date();
   const [result] = await db
     .insert(contactEntries)
@@ -151,7 +175,7 @@ export async function submitContactEntry(request: Request) {
 
 // ─── Contact Entries: Admin ──────────────────────────────────────────────────
 
-export async function getAllContactEntries(request: Request) {
+async function getAllContactEntriesHandler(request: Request) {
   const session = await ensureAdmin(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -163,7 +187,7 @@ export async function getAllContactEntries(request: Request) {
   return Response.json(all);
 }
 
-export async function deleteContactEntry(request: Request) {
+async function deleteContactEntryHandler(request: Request) {
   const session = await ensureAdmin(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -175,7 +199,7 @@ export async function deleteContactEntry(request: Request) {
   return new Response(null, { status: 204 });
 }
 
-export async function markContactEntryRead(request: Request) {
+async function markContactEntryReadHandler(request: Request) {
   const session = await ensureAdmin(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -192,59 +216,54 @@ export async function markContactEntryRead(request: Request) {
   return Response.json(result);
 }
 
-export async function getAdminContactStats() {
-  const [allCount] = await db.select({ count: count() }).from(contactEntries);
-  const [unreadCount] = await db
-    .select({ count: count() })
-    .from(contactEntries)
-    .where(eq(contactEntries.isRead, false));
-  const [todayCount] = await db
-    .select({ count: count() })
-    .from(contactEntries)
-    .where(sql`date(${contactEntries.createdAt}) = date('now')`);
-
-  return {
-    total: allCount?.count ?? 0,
-    unread: unreadCount?.count ?? 0,
-    today: todayCount?.count ?? 0,
-  };
-}
-
 const contactEntrySchema = z.object({
   name: z.string().min(1).max(255),
   email: z.string().email(),
-  phone: z.string().min(1).max(20),
-  message: z.string().min(1).max,
+  phone: z
+    .string()
+    .trim()
+    .min(10)
+    .max(20)
+    .regex(/^\+?[\d\s()-]+$/, "Please enter a valid phone number"),
+  message: z.string().min(1).max(5000),
   preferredDate: z.coerce.date(),
-  preferredTime: z.string().min(1),
+  preferredTime: z.string().min(1).max(50),
 });
 
+export const getAllServices = createServerFn({ method: "GET" }).handler(() =>
+  getAllServicesHandler(buildServerRequest("GET")),
+);
+
+export const createService = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => createServiceHandler(buildServerRequest("POST", data)));
+
+export const updateService = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => updateServiceHandler(buildServerRequest("POST", data)));
+
+export const deleteService = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => deleteServiceHandler(buildServerRequest("POST", data)));
+
+export const getPublicServices = createServerFn({ method: "GET" }).handler(() =>
+  getPublicServicesHandler(),
+);
+
+export const submitContactEntry = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => submitContactEntryHandler(buildServerRequest("POST", data)));
+
+export const getAllContactEntries = createServerFn({ method: "GET" }).handler(() =>
+  getAllContactEntriesHandler(buildServerRequest("GET")),
+);
+
+export const deleteContactEntry = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => deleteContactEntryHandler(buildServerRequest("POST", data)));
+
+export const markContactEntryRead = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => markContactEntryReadHandler(buildServerRequest("POST", data)));
+
 // ─── Admin Stats ─────────────────────────────────────────────────────────────
-
-export async function getAdminStats() {
-  const [servicesCount] = await db.select({ count: sql<number>`count(*)` }).from(services);
-  const [testimonialsCount] = await db.select({ count: sql<number>`count(*)` }).from(testimonials);
-  const [pendingCount] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(consultations)
-    .where(eq(consultations.status, "pending"));
-  const [confirmedCount] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(consultations)
-    .where(eq(consultations.status, "confirmed"));
-
-  const [contactTotal] = await db.select({ count: sql<number>`count(*)` }).from(contactEntries);
-  const [contactUnread] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(contactEntries)
-    .where(eq(contactEntries.isRead, false));
-
-  return {
-    services: servicesCount?.count ?? 0,
-    testimonials: testimonialsCount?.count ?? 0,
-    pendingConsultations: pendingCount?.count ?? 0,
-    confirmedConsultations: confirmedCount?.count ?? 0,
-    contactTotal: contactTotal?.count ?? 0,
-    contactUnread: contactUnread?.count ?? 0,
-  };
-}

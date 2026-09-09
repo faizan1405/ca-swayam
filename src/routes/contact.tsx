@@ -46,6 +46,9 @@ export const Route = createFileRoute("/contact")({
 });
 
 type PublicSettings = Record<string, { value: string; type: string }>;
+type ContactFormErrors = Partial<
+  Record<"name" | "email" | "phone" | "message" | "date" | "time", string>
+>;
 
 const TIME_SLOTS = [
   "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM",
@@ -60,7 +63,7 @@ function ContactPage() {
   const [isActive, setIsActive] = useState(true);
 
   const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<ContactFormErrors>({});
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -96,13 +99,17 @@ function ContactPage() {
   const formattedPhone = phoneSetting.length === 10 ? `+91 ${phoneSetting.slice(0, 5)} ${phoneSetting.slice(5)}` : phoneSetting;
 
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: ContactFormErrors = {};
     if (!name.trim()) newErrors.name = "Name is required";
     if (!email.trim()) newErrors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
       newErrors.email = "Please enter a valid email address";
     if (!phone.trim()) newErrors.phone = "Phone number is required";
-    else if (phone.trim().length < 10)
+    else if (
+      phone.trim().length < 10 ||
+      phone.trim().length > 20 ||
+      !/^\+?[\d\s()-]+$/.test(phone.trim())
+    )
       newErrors.phone = "Please enter a valid phone number";
     if (!message.trim()) newErrors.message = "Message is required";
     if (!preferredDate) newErrors.date = "Preferred date is required";
@@ -120,20 +127,25 @@ function ContactPage() {
 
     setSubmitting(true);
     try {
-      const res = await submitContactEntry(
-        new Request(window.location.href, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      const res = await submitContactEntry({
+        data: {
+          body: {
             name: name.trim(),
             email: email.trim(),
             phone: phone.trim(),
             message: message.trim(),
-            preferredDate: preferredDate!.toISOString(),
+            // This is a calendar preference, not an instant in time. Sending a
+            // date-only value prevents local midnight from shifting to the
+            // previous UTC day in production.
+            preferredDate: [
+              preferredDate!.getFullYear(),
+              String(preferredDate!.getMonth() + 1).padStart(2, "0"),
+              String(preferredDate!.getDate()).padStart(2, "0"),
+            ].join("-"),
             preferredTime,
-          }),
-        }),
-      );
+          },
+        },
+      });
 
       if (res.ok) {
         toast.success("Your enquiry has been submitted! We will get back to you soon.");

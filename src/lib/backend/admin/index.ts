@@ -3,10 +3,9 @@
  */
 
 import { z } from "zod";
-import bcrypt from "bcryptjs";
-
+import { createServerFn } from "@tanstack/react-start";
 import { db, admins, services, testimonials, consultations, contactEntries } from "../db";
-import { eq, sql } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import {
   hashPassword,
   verifyPassword,
@@ -15,7 +14,7 @@ import {
   clearCookieHeader,
   setCookieHeader,
 } from "../auth";
-import { SESSION_SECRET } from "../env";
+import { buildServerRequest, serverRequestInputSchema } from "../server-request";
 
 // ─── Schemas ────────────────────────────────────────────────────────────────
 
@@ -36,7 +35,7 @@ const updateAdminSchema = z.object({
 
 // ─── Login ──────────────────────────────────────────────────────────────────
 
-export async function adminLogin(request: Request) {
+async function adminLoginHandler(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });
 
@@ -79,7 +78,7 @@ export async function adminLogin(request: Request) {
 
 // ─── Logout ─────────────────────────────────────────────────────────────────
 
-export async function adminLogout() {
+async function adminLogoutHandler() {
   const cookie = clearCookieHeader();
   return new Response(null, {
     status: 204,
@@ -89,14 +88,16 @@ export async function adminLogout() {
 
 // ─── Get current session ────────────────────────────────────────────────────
 
-export async function getAdminSession(request: Request) {
+async function getAdminSessionHandler(request: Request) {
   const session = await getSession(request);
-  return session ? { id: session.id, email: session.email, name: session.name } : null;
+  return session
+    ? { adminId: session.adminId, email: session.email, name: session.name }
+    : null;
 }
 
 // ─── Change password ────────────────────────────────────────────────────────
 
-export async function changePassword(request: Request) {
+async function changePasswordHandler(request: Request) {
   const session = await getSession(request);
   if (!session) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -111,7 +112,7 @@ export async function changePassword(request: Request) {
   }
 
   const admin = await db.query.admins.findFirst({
-    where: (a, { eq }) => eq(a.id, session.id),
+    where: (a, { eq }) => eq(a.id, session.adminId),
   });
 
   if (!admin) {
@@ -131,7 +132,7 @@ export async function changePassword(request: Request) {
 
 // ─── Update admin profile ───────────────────────────────────────────────────
 
-export async function updateAdminProfile(request: Request) {
+async function updateAdminProfileHandler(request: Request) {
   const session = await getSession(request);
   if (!session) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -152,13 +153,17 @@ export async function updateAdminProfile(request: Request) {
     const existing = await db.query.admins.findFirst({
       where: (a, { eq }) => eq(a.email, parsed.data.email!),
     });
-    if (existing && existing.id !== session.id) {
+    if (existing && existing.id !== session.adminId) {
       return Response.json({ error: "Email already in use" }, { status: 400 });
     }
     updates.email = parsed.data.email;
   }
 
-  const result = await db.update(admins).set(updates).where(eq(admins.id, session.id)).returning();
+  const result = await db
+    .update(admins)
+    .set(updates)
+    .where(eq(admins.id, session.adminId))
+    .returning();
   const row = result[0];
   if (!row) {
     return Response.json({ error: "Admin not found" }, { status: 404 });
@@ -169,21 +174,24 @@ export async function updateAdminProfile(request: Request) {
 
 // ─── Stats ──────────────────────────────────────────────────────────────────
 
-export async function getAdminStats() {
-  const [servicesCount] = await db.select({ count: sql<number>`count(*)` }).from(services);
-  const [testimonialsCount] = await db.select({ count: sql<number>`count(*)` }).from(testimonials);
+async function getAdminStatsHandler(request: Request) {
+  const session = await getSession(request);
+  if (!session) throw Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const [servicesCount] = await db.select({ count: count() }).from(services);
+  const [testimonialsCount] = await db.select({ count: count() }).from(testimonials);
   const [pendingCount] = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: count() })
     .from(consultations)
     .where(eq(consultations.status, "pending"));
   const [confirmedCount] = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: count() })
     .from(consultations)
     .where(eq(consultations.status, "confirmed"));
 
-  const [contactTotal] = await db.select({ count: sql<number>`count(*)` }).from(contactEntries);
+  const [contactTotal] = await db.select({ count: count() }).from(contactEntries);
   const [contactUnread] = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: count() })
     .from(contactEntries)
     .where(eq(contactEntries.isRead, false));
 
@@ -196,3 +204,27 @@ export async function getAdminStats() {
     contactUnread: contactUnread?.count ?? 0,
   };
 }
+
+export const adminLogin = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => adminLoginHandler(buildServerRequest("POST", data)));
+
+export const adminLogout = createServerFn({ method: "POST" }).handler(() =>
+  adminLogoutHandler(),
+);
+
+export const getAdminSession = createServerFn({ method: "GET" }).handler(() =>
+  getAdminSessionHandler(buildServerRequest("GET")),
+);
+
+export const changePassword = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => changePasswordHandler(buildServerRequest("POST", data)));
+
+export const updateAdminProfile = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => updateAdminProfileHandler(buildServerRequest("POST", data)));
+
+export const getAdminStats = createServerFn({ method: "GET" }).handler(() =>
+  getAdminStatsHandler(buildServerRequest("GET")),
+);

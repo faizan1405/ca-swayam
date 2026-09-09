@@ -1,17 +1,17 @@
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // ─── Admins ──────────────────────────────────────────────────────────────────
-export const admins = sqliteTable(
+export const admins = pgTable(
   "admins",
   {
     id: text("id").primaryKey(),
     email: text("email").notNull().unique(),
     passwordHash: text("password_hash").notNull(),
     name: text("name").notNull(),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-    lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   },
   (table) => ({
     emailIdx: index("admins_email_idx").on(table.email),
@@ -29,7 +29,7 @@ export type Admin = typeof admins.$inferSelect;
 export type NewAdmin = typeof admins.$inferInsert;
 
 // ─── Services ────────────────────────────────────────────────────────────────
-export const services = sqliteTable(
+export const services = pgTable(
   "services",
   {
     id: text("id").primaryKey(),
@@ -37,11 +37,11 @@ export const services = sqliteTable(
     title: text("title").notNull(),
     label: text("label").notNull(),
     description: text("description").notNull(),
-    items: text("items", { mode: "json" }).notNull().$type<string[]>(),
+    items: jsonb("items").notNull().$type<string[]>(),
     sortOrder: integer("sort_order").notNull().default(0),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     sortOrderIdx: index("services_sort_order_idx").on(table.sortOrder),
@@ -64,7 +64,7 @@ export type Service = typeof services.$inferSelect;
 export type NewService = typeof services.$inferInsert;
 
 // ─── Testimonials ────────────────────────────────────────────────────────────
-export const testimonials = sqliteTable(
+export const testimonials = pgTable(
   "testimonials",
   {
     id: text("id").primaryKey(),
@@ -72,9 +72,9 @@ export const testimonials = sqliteTable(
     name: text("name").notNull(),
     place: text("place").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     sortOrderIdx: index("testimonials_sort_order_idx").on(table.sortOrder),
@@ -95,7 +95,7 @@ export type Testimonial = typeof testimonials.$inferSelect;
 export type NewTestimonial = typeof testimonials.$inferInsert;
 
 // ─── Consultation Formats (static config) ───────────────────────────────────
-export const consultationFormats = sqliteTable(
+export const consultationFormats = pgTable(
   "consultation_formats",
   {
     id: text("id").primaryKey(),
@@ -105,7 +105,7 @@ export const consultationFormats = sqliteTable(
     fee: integer("fee").notNull(),
     note: text("note").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
   },
   (table) => ({
     sortOrderIdx: index("consult_formats_sort_order_idx").on(table.sortOrder),
@@ -117,7 +117,7 @@ export type ConsultationFormat = typeof consultationFormats.$inferSelect;
 export type NewConsultationFormat = typeof consultationFormats.$inferInsert;
 
 // ─── Consultations (bookings) ────────────────────────────────────────────────
-export const consultations = sqliteTable(
+export const consultations = pgTable(
   "consultations",
   {
     id: text("id").primaryKey(),
@@ -126,14 +126,14 @@ export const consultations = sqliteTable(
     formatId: text("format_id")
       .notNull()
       .references(() => consultationFormats.id),
-    date: integer("date", { mode: "timestamp" }).notNull(),
+    date: timestamp("date", { withTimezone: true }).notNull(),
     time: text("time").notNull(),
     status: text("status", { enum: ["pending", "confirmed", "cancelled", "completed"] })
       .notNull()
       .default("pending"),
     note: text("note"),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     statusIdx: index("consultations_status_idx").on(table.status),
@@ -157,7 +157,7 @@ export type Consultation = typeof consultations.$inferSelect;
 export type NewConsultation = typeof consultations.$inferInsert;
 
 // ─── Contact Entries ─────────────────────────────────────────────────────────
-export const contactEntries = sqliteTable(
+export const contactEntries = pgTable(
   "contact_entries",
   {
     id: text("id").primaryKey(),
@@ -165,11 +165,11 @@ export const contactEntries = sqliteTable(
     email: text("email").notNull(),
     phone: text("phone").notNull(),
     message: text("message").notNull(),
-    preferredDate: integer("preferred_date", { mode: "timestamp" }).notNull(),
+    preferredDate: timestamp("preferred_date", { withTimezone: true }).notNull(),
     preferredTime: text("preferred_time").notNull(),
-    isRead: integer("is_read", { mode: "boolean" }).notNull().default(false),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+    isRead: boolean("is_read").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     createdAtIdx: index("contact_entries_created_at_idx").on(table.createdAt),
@@ -182,7 +182,7 @@ export const insertContactEntrySchema = z.object({
   name: z.string().min(1).max(255),
   email: z.string().email(),
   phone: z.string().min(1).max(20),
-  message: z.string().min(1).max,
+  message: z.string().min(1).max(5000),
   preferredDate: z.coerce.date(),
   preferredTime: z.string().min(1),
   isRead: z.coerce.boolean().optional(),
@@ -193,13 +193,13 @@ export type ContactEntry = typeof contactEntries.$inferSelect;
 export type NewContactEntry = typeof contactEntries.$inferInsert;
 
 // ─── Site Settings ───────────────────────────────────────────────────────────
-export const siteSettings = sqliteTable("site_settings", {
+export const siteSettings = pgTable("site_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
   type: text("type", { enum: ["text", "number", "boolean", "json"] })
     .notNull()
     .default("text"),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const insertSiteSettingSchema = createInsertSchema(siteSettings);
@@ -207,7 +207,7 @@ export type SiteSetting = typeof siteSettings.$inferSelect;
 export type NewSiteSetting = typeof siteSettings.$inferInsert;
 
 // ─── Site Info (single-row table for editable website information) ────────────
-export const siteInfo = sqliteTable(
+export const siteInfo = pgTable(
   "site_info",
   {
     id: text("id").primaryKey(),
@@ -228,9 +228,9 @@ export const siteInfo = sqliteTable(
     heroHeading: text("hero_heading").notNull().default(""),
     heroSubtext: text("hero_subtext").notNull().default(""),
     heroDescription: text("hero_description").notNull().default(""),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
 );
 

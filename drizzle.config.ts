@@ -3,9 +3,8 @@ import { defineConfig } from "drizzle-kit";
 export default defineConfig({
   schema: "./src/lib/backend/db/schema.ts",
   out: "./src/lib/backend/db/migrations",
-  dialect: "sqlite",
-  driver: "better-sqlite",
+  dialect: "postgresql",
   dbCredentials: {
-    url: "./src/lib/backend/db/swayam.sqlite",
+    url: process.env["DATABASE_URL"]!,
   },
 });

@@ -26,7 +26,11 @@ const navItems = [
 ];
 
 function AdminLayout() {
-  const [session, setSession] = useState<{ id: string; email: string; name: string } | null>(null);
+  const [session, setSession] = useState<{
+    adminId: string;
+    email: string;
+    name: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
@@ -39,7 +43,7 @@ function AdminLayout() {
       return;
     }
     import("@/lib/backend/admin").then(({ getAdminSession }) =>
-      getAdminSession(new Request(window.location.href))
+      getAdminSession()
         .then((s) => {
           setSession(s);
           if (!s) {

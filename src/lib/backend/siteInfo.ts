@@ -5,12 +5,13 @@
  */
 
 import { z } from "zod";
+import { createServerFn } from "@tanstack/react-start";
 
 import { db, siteInfo } from "./db";
 import { eq } from "drizzle-orm";
 
 import { getSession } from "./auth";
-import type { AdminSession } from "./auth";
+import { buildServerRequest, serverRequestInputSchema } from "./server-request";
 
 // ─── Schema ─────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ const siteInfoUpdateSchema = z.object({
 
 // ─── Admin: Get ─────────────────────────────────────────────────────────────
 
-export async function getSiteInfo(request: Request) {
+async function getSiteInfoHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -50,7 +51,7 @@ export async function getSiteInfo(request: Request) {
 
 // ─── Admin: Update ──────────────────────────────────────────────────────────
 
-export async function updateSiteInfo(request: Request) {
+async function updateSiteInfoHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -102,14 +103,14 @@ export async function updateSiteInfo(request: Request) {
 
 // ─── Public: Get (no auth) ──────────────────────────────────────────────────
 
-export async function getPublicSiteInfo() {
+async function getPublicSiteInfoHandler() {
   const [result] = await db.select().from(siteInfo).where(eq(siteInfo.id, "site"));
   return Response.json(result ?? null);
 }
 
 // ─── Admin: Update availability status ─────────────────────────────────────
 
-export async function updateAvailabilityStatus(request: Request) {
+async function updateAvailabilityStatusHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -126,3 +127,19 @@ export async function updateAvailabilityStatus(request: Request) {
 
   return Response.json(result);
 }
+
+export const getSiteInfo = createServerFn({ method: "GET" }).handler(() =>
+  getSiteInfoHandler(buildServerRequest("GET")),
+);
+
+export const updateSiteInfo = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => updateSiteInfoHandler(buildServerRequest("POST", data)));
+
+export const getPublicSiteInfo = createServerFn({ method: "GET" }).handler(() =>
+  getPublicSiteInfoHandler(),
+);
+
+export const updateAvailabilityStatus = createServerFn({ method: "POST" })
+  .validator(serverRequestInputSchema)
+  .handler(({ data }) => updateAvailabilityStatusHandler(buildServerRequest("POST", data)));
