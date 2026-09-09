@@ -161,6 +161,7 @@ function ConsultationsPage() {
                     <TableHead>Contact</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Time</TableHead>
+                    <TableHead>Note</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -177,6 +178,9 @@ function ConsultationsPage() {
                       </TableCell>
                       <TableCell className="text-sm text-[var(--color-muted-foreground)]">
                         {c.time}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-sm text-[var(--color-muted-foreground)]">
+                        {c.note || "—"}
                       </TableCell>
                       <TableCell>
                         <Select

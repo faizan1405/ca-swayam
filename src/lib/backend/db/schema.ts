@@ -124,7 +124,6 @@ export const consultations = pgTable(
     name: text("name").notNull(),
     contact: text("contact").notNull(),
     formatId: text("format_id")
-      .notNull()
       .references(() => consultationFormats.id),
     date: timestamp("date", { withTimezone: true }).notNull(),
     time: text("time").notNull(),
@@ -145,7 +144,7 @@ export const insertConsultationSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1),
   contact: z.string().min(1),
-  formatId: z.string(),
+  formatId: z.string().optional(),
   date: z.coerce.date(),
   time: z.string(),
   status: z.string().optional(),

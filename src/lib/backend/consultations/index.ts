@@ -13,14 +13,6 @@ async function submitConsultationHandler(request: Request) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  // Verify format exists
-  const format = await db.query.consultationFormats.findFirst({
-    where: (f, { eq }) => eq(f.id, parsed.data.formatId),
-  });
-  if (!format) {
-    return Response.json({ error: "Invalid consultation format" }, { status: 400 });
-  }
-
   const consultationDate = new Date(parsed.data.date);
   if (Number.isNaN(consultationDate.getTime())) {
     return Response.json({ error: "Invalid consultation date" }, { status: 400 });
@@ -38,7 +30,6 @@ async function submitConsultationHandler(request: Request) {
     .where(
       and(
         eq(consultations.contact, parsed.data.contact),
-        eq(consultations.formatId, parsed.data.formatId),
         eq(consultations.date, consultationDate),
         eq(consultations.time, parsed.data.time),
         gte(consultations.createdAt, duplicateWindow),
@@ -60,7 +51,7 @@ async function submitConsultationHandler(request: Request) {
       id,
       name: parsed.data.name,
       contact: parsed.data.contact,
-      formatId: parsed.data.formatId,
+      ...(parsed.data.formatId ? { formatId: parsed.data.formatId } : {}),
       date: consultationDate,
       time: parsed.data.time,
       status: "pending",
@@ -179,7 +170,7 @@ async function listFormatsHandler() {
 const consultationSubmitSchema = z.object({
   name: z.string().min(1).max(255),
   contact: z.string().min(1).max(255),
-  formatId: z.string().min(1),
+  formatId: z.string().optional(),
   date: z.string().min(1),
   time: z.string().min(1),
   note: z.string().optional(),
