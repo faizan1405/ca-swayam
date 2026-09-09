@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
@@ -17,7 +17,7 @@ import { useRouter } from "@tanstack/react-router";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/admin/consultations", icon: CalendarCheck, label: "Consultations" },
+  { to: "/admin/consultations", icon: CalendarCheck, label: "Consultation Requests" },
   { to: "/admin/contact-entries", icon: Mail, label: "Contact Entries" },
   { to: "/admin/services", icon: Briefcase, label: "Services" },
   { to: "/admin/testimonials", icon: MessageSquare, label: "Testimonials" },
@@ -65,8 +65,8 @@ function AdminLayout() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
       </div>
     );
   }
@@ -78,12 +78,13 @@ function AdminLayout() {
   if (!session) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-[var(--color-background)]">
       <Toaster position="top-right" richColors />
-      {/* Mobile sidebar overlay */}
+
+      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -91,80 +92,139 @@ function AdminLayout() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto
+          fixed inset-y-0 left-0 z-50 flex h-screen w-[var(--sidebar-width)] flex-col
+          border-r border-[var(--sidebar-border)]
+          bg-[var(--sidebar-bg)]
+          text-[var(--sidebar-text)]
+          transition-transform duration-300 ease-in-out
+          lg:translate-x-0 lg:static lg:z-auto
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
-        <div className="flex h-full flex-col">
-          <div className="flex h-16 items-center justify-between border-b border-border px-4">
-            <Link to="/admin" className="flex items-center gap-2">
-              <span className="text-lg font-bold text-foreground">Swayam Goyal</span>
-              <span className="text-xs text-muted-foreground">&amp; Associates</span>
-            </Link>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          <nav className="flex-1 space-y-1 p-3">
-            {navItems.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                activeProps={{ className: "bg-primary/10 text-primary font-medium" }}
-                inactiveProps={{
-                  className: "text-muted-foreground hover:bg-accent hover:text-foreground",
-                }}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="border-t border-border p-3">
-            <div className="mb-3 flex items-center gap-3 px-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                {session.name?.charAt(0)?.toUpperCase() || "A"}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">{session.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{session.email}</p>
-              </div>
+        {/* Brand */}
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-[var(--sidebar-border)] px-5">
+          <Link to="/admin" className="flex items-center gap-2.5 no-underline">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)] text-sm font-bold text-white">
+              SG
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <LogOut className="h-4 w-4" />
-              Log out
-            </button>
+            <div className="leading-tight">
+              <span className="block text-sm font-semibold text-white">Swayam Goyal</span>
+              <span className="block text-[11px] text-[var(--sidebar-text-muted)]">
+                & Associates
+              </span>
+            </div>
+          </Link>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--sidebar-text-muted)] transition hover:text-white lg:hidden"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          <ul className="flex flex-col gap-0.5">
+            {navItems.map((item) => (
+              <li key={item.to}>
+                <NavLink item={item} onNavigate={() => setSidebarOpen(false)} />
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* User + Logout */}
+        <div className="shrink-0 border-t border-[var(--sidebar-border)] p-3">
+          <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--sidebar-bg-active)] text-sm font-semibold text-white">
+              {session.name?.charAt(0)?.toUpperCase() || "A"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-white">{session.name}</p>
+              <p className="truncate text-xs text-[var(--sidebar-text-muted)]">{session.email}</p>
+            </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[var(--sidebar-text-muted)] transition-colors duration-150 hover:bg-[var(--sidebar-bg-hover)] hover:text-white"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            Log out
+          </button>
         </div>
       </aside>
 
       {/* Main content area */}
-      <div className="flex flex-1 flex-col min-w-0">
-        <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border bg-card px-4 lg:px-8">
-          <button onClick={() => setSidebarOpen(true)} className="lg:hidden">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 lg:px-8">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--color-muted-foreground)] transition hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] lg:hidden"
+          >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
             <Link
               to="/"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--color-muted-foreground)] transition hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
             >
               View site
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
+              </svg>
             </Link>
           </div>
         </header>
         <main className="flex-1 overflow-auto p-4 lg:p-8">
-          <Outlet />
+          <div className="mx-auto max-w-7xl">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
+  );
+}
+
+function NavLink({
+  item,
+  onNavigate,
+}: {
+  item: (typeof navItems)[number];
+  onNavigate: () => void;
+}) {
+  const router = useRouter();
+  const pathname = router.state.location.pathname;
+  const isActive =
+    item.to === "/admin"
+      ? pathname === "/admin"
+      : pathname === item.to || pathname.startsWith(item.to + "/");
+
+  return (
+    <Link
+      to={item.to}
+      onClick={onNavigate}
+      className={`
+        flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium
+        transition-all duration-150 no-underline outline-none
+        ${
+          isActive
+            ? "bg-[var(--sidebar-bg-active)] text-[var(--sidebar-text-active)]"
+            : "text-[var(--sidebar-text)] hover:bg-[var(--sidebar-bg-hover)] hover:text-white"
+        }
+      `}
+    >
+      <item.icon
+        className={`h-[18px] w-[18px] shrink-0 ${
+          isActive ? "text-white" : "text-[var(--sidebar-text-muted)]"
+        }`}
+      />
+      {item.label}
+    </Link>
   );
 }
 

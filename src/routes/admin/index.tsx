@@ -56,8 +56,9 @@ function DashboardPage() {
         if (res.ok) {
           const data = await res.json();
           const sorted = (Array.isArray(data) ? data : [])
-            .sort((a: RecentTestimonial, b: RecentTestimonial) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+            .sort(
+              (a: RecentTestimonial, b: RecentTestimonial) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
             )
             .slice(0, 5);
           setRecentTestimonials(sorted);
@@ -80,7 +81,6 @@ function DashboardPage() {
           description: "Active service offerings",
           icon: Briefcase,
           href: "/admin/services",
-          accent: "text-primary",
         },
         {
           title: "Testimonials",
@@ -88,7 +88,6 @@ function DashboardPage() {
           description: "Client reviews",
           icon: MessageSquare,
           href: "/admin/testimonials",
-          accent: "text-primary",
         },
         {
           title: "Consultation Requests",
@@ -96,7 +95,6 @@ function DashboardPage() {
           description: `${stats.pendingConsultations} pending · ${stats.confirmedConsultations} confirmed`,
           icon: BookOpen,
           href: "/admin/consultations",
-          accent: "text-primary",
         },
         {
           title: "Contact Entries",
@@ -104,7 +102,6 @@ function DashboardPage() {
           description: "Form enquiries",
           icon: Mail,
           href: "/admin/contact-entries",
-          accent: "text-primary",
         },
       ]
     : [];
@@ -112,17 +109,19 @@ function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Overview of your website</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+          Overview of your website
+        </p>
       </div>
 
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
-              <CardHeader className="space-y-2">
-                <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-                <div className="h-8 w-16 animate-pulse rounded bg-muted" />
+              <CardHeader className="space-y-2 pb-3">
+                <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+                <div className="h-8 w-12 animate-pulse rounded bg-muted" />
               </CardHeader>
             </Card>
           ))}
@@ -130,36 +129,39 @@ function DashboardPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {cards.map((card) => (
-            <Card key={card.title}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <CardDescription className="text-xs font-medium uppercase tracking-wider">
-                    {card.title}
-                  </CardDescription>
-                  <card.icon className={`h-4 w-4 ${card.accent}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-baseline justify-between">
-                  <span className="font-display text-3xl font-semibold">{card.value}</span>
-                  <Link
-                    to={card.href}
-                    className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    Manage <ArrowUpRight className="inline h-3 w-3" />
-                  </Link>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">{card.description}</p>
-              </CardContent>
-            </Card>
+            <Link to={card.href} key={card.title} className="no-underline">
+              <Card className="h-full transition-shadow duration-200 hover:shadow-md">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardDescription className="text-xs font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                      {card.title}
+                    </CardDescription>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--color-primary)]/10">
+                      <card.icon className="h-4 w-4 text-[var(--color-primary)]" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-3xl font-semibold tracking-tight">{card.value}</span>
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-primary)]">
+                      Manage <ArrowUpRight className="h-3 w-3" />
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-xs text-[var(--color-muted-foreground)]">
+                    {card.description}
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Quick actions</CardTitle>
+            <CardTitle className="text-base font-semibold">Quick actions</CardTitle>
             <CardDescription>Common management tasks</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2">
@@ -171,41 +173,39 @@ function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Star className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Star className="h-4 w-4 text-[var(--color-primary)]" />
               Recently added testimonials
             </CardTitle>
             <CardDescription>
-              {recentTestimonials.length > 0
-                ? "Latest client reviews"
-                : "No testimonials yet"}
+              {recentTestimonials.length > 0 ? "Latest client reviews" : "No testimonials yet"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {recentTestimonials.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-[var(--color-muted-foreground)]">
                 Add your first testimonial to see it here.
               </p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-0">
                 {recentTestimonials.map((t) => (
                   <div
                     key={t.id}
-                    className="flex items-start justify-between gap-3 border-b border-border last:border-0 pb-3 last:pb-0"
+                    className="flex items-center justify-between gap-3 border-b border-border last:border-0 py-3 last:pb-0"
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{t.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="text-xs text-[var(--color-muted-foreground)] truncate">
                         {t.quote}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      <span className="text-[11px] text-[var(--color-muted-foreground)] whitespace-nowrap">
                         {formatDate(t.createdAt)}
                       </span>
                       <Badge
                         variant={t.isActive ? "default" : "secondary"}
-                        className="text-[10px]"
+                        className="text-[10px] h-5"
                       >
                         {t.isActive ? "Published" : "Hidden"}
                       </Badge>
@@ -225,10 +225,10 @@ function QuickAction({ to, label }: { to: string; label: string }) {
   return (
     <Link
       to={to}
-      className="flex items-center justify-between rounded-md border border-border bg-background px-4 py-3 text-sm transition-colors hover:border-primary hover:bg-accent"
+      className="flex items-center justify-between rounded-lg border border-border bg-background px-4 py-3 text-sm transition-colors hover:border-[var(--color-primary)]/40 hover:bg-accent no-underline text-[var(--color-foreground)]"
     >
       <span>{label}</span>
-      <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+      <ArrowUpRight className="h-4 w-4 text-[var(--color-muted-foreground)]" />
     </Link>
   );
 }

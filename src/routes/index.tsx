@@ -128,17 +128,6 @@ function HomePage() {
                   Book a Consultation <ArrowRight />
                 </Link>
               </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="h-auto rounded-xl border-secondary-foreground/35 bg-secondary/20 px-6 py-4 text-xs font-bold uppercase tracking-[0.14em] text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-secondary-foreground"
-              >
-                <a
-                  href={`mailto:${settings["email"]?.value ?? "swayamsoffice@gmail.com"}?subject=Client%20login%20enquiry`}
-                >
-                  Client Login
-                </a>
-              </Button>
             </div>
           </Reveal>
           <Reveal className="delay-2">

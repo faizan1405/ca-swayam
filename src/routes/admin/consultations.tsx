@@ -105,20 +105,22 @@ function ConsultationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Consultations</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Manage consultation bookings</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Consultations</h1>
+        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+          Manage consultation bookings
+        </p>
       </div>
 
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>Bookings</CardTitle>
+              <CardTitle className="text-base font-semibold">Bookings</CardTitle>
               <CardDescription>{items.length} consultations</CardDescription>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted-foreground)]" />
                 <Input
                   placeholder="Search name or contact"
                   value={search}
@@ -143,9 +145,11 @@ function ConsultationsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">Loading…</div>
+            <div className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">
+              Loading…
+            </div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
+            <div className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">
               No consultations found
             </div>
           ) : (
@@ -165,9 +169,15 @@ function ConsultationsPage() {
                   {filtered.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{c.contact}</TableCell>
-                      <TableCell className="text-sm">{formatDate(c.date)}</TableCell>
-                      <TableCell className="text-sm">{c.time}</TableCell>
+                      <TableCell className="text-sm text-[var(--color-muted-foreground)]">
+                        {c.contact}
+                      </TableCell>
+                      <TableCell className="text-sm text-[var(--color-foreground)]">
+                        {formatDate(c.date)}
+                      </TableCell>
+                      <TableCell className="text-sm text-[var(--color-muted-foreground)]">
+                        {c.time}
+                      </TableCell>
                       <TableCell>
                         <Select
                           value={c.status}

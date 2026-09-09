@@ -79,8 +79,8 @@ function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
-  const [availabilityLoading, setAvailabilityLoading] = useState(false);
-  const [availabilityStatus, setAvailabilityStatus] = useState<boolean>(true);
+  const [availabilityLoading, setAvailabilityLoading] = useState(true);
+  const [availabilityStatus, setAvailabilityStatus] = useState<boolean | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -98,21 +98,28 @@ function SettingsPage() {
     }
   };
 
+  const loadAvailability = async () => {
+    setAvailabilityLoading(true);
+    try {
+      const { getSiteInfo } = await import("@/lib/backend/siteInfo");
+      const res = await getSiteInfo();
+      if (!res.ok) throw new Error("Failed to load availability status");
+      const data = await res.json();
+      if (typeof data?.isActive !== "boolean") {
+        throw new Error("Availability status is missing");
+      }
+      setAvailabilityStatus(data.isActive);
+    } catch {
+      setAvailabilityStatus(null);
+      toast.error("Failed to load availability status.");
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  };
+
   useEffect(() => {
     load();
-    // Load availability status
-    (async () => {
-      try {
-        const { getPublicSiteInfo } = await import("@/lib/backend/siteInfo");
-        const res = await getPublicSiteInfo();
-        if (res.ok) {
-          const data = await res.json();
-          setAvailabilityStatus(data?.isActive ?? true);
-        }
-      } catch {
-        // ignore
-      }
-    })();
+    loadAvailability();
   }, []);
 
   const handleSave = async (key: string) => {
@@ -149,11 +156,15 @@ function SettingsPage() {
       const res = await updateAvailabilityStatus({
         data: { body: { isActive: checked } },
       });
-      if (res.ok) {
-        toast.success(checked ? "CA is now Online / Active" : "CA is now Inactive / Offline");
-      } else {
-        throw new Error("Failed to update");
+      if (!res.ok) {
+        throw new Error("Failed to update availability status");
       }
+      const data = await res.json();
+      if (typeof data?.isActive !== "boolean") throw new Error("Invalid update response");
+      setAvailabilityStatus(data.isActive);
+      toast.success(
+        data.isActive ? "CA is now Online / Available" : "CA is now Offline / Unavailable",
+      );
     } catch {
       setAvailabilityStatus(previousStatus);
       toast.error("Failed to update availability status. Please try again.");
@@ -165,18 +176,21 @@ function SettingsPage() {
   const handleRefresh = () => {
     setEditing({});
     load();
+    loadAvailability();
   };
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="font-display text-3xl font-semibold">Website Settings</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight">Website Settings</h1>
+          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
             Manage your website's content and contact information
           </p>
         </div>
-        <div className="py-12 text-center text-sm text-muted-foreground">Loading…</div>
+        <div className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">
+          Loading…
+        </div>
       </div>
     );
   }
@@ -185,8 +199,8 @@ function SettingsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-semibold">Website Settings</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight">Website Settings</h1>
+          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
             Manage your website's content and contact information
           </p>
         </div>
@@ -201,13 +215,15 @@ function SettingsPage() {
         <CardHeader>
           <CardTitle>CA Availability Status</CardTitle>
           <CardDescription>
-            Control whether the CA appears as Online or Inactive on the public website
+            Control whether the CA appears as available on the public website
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-border bg-muted/30 p-5">
             <div className="flex items-center gap-4">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-full ${availabilityStatus ? "bg-green-500/10" : "bg-muted"}`}>
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-full ${availabilityStatus ? "bg-green-500/10" : "bg-muted"}`}
+              >
                 {availabilityStatus ? (
                   <CheckCircle2 className="h-6 w-6 text-green-500" />
                 ) : (
@@ -216,23 +232,36 @@ function SettingsPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  {availabilityStatus ? "Online / Active" : "Inactive / Offline"}
+                  {availabilityStatus === null
+                    ? "Status unavailable"
+                    : availabilityStatus
+                      ? "Online / Available"
+                      : "Offline / Unavailable"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {availabilityStatus
-                    ? "Visitors will see the CA as available for consultations"
-                    : "Visitors will see the CA as currently unavailable"}
+                  {availabilityStatus === null
+                    ? "Refresh the page to try loading the current database value again"
+                    : availabilityStatus
+                      ? "Visitors will see the CA as available for consultations"
+                      : "Visitors will see the CA as currently unavailable"}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3 sm:flex-shrink-0">
-              <span className={`text-xs font-medium ${availabilityStatus ? "text-green-500" : "text-muted-foreground"}`}>
-                {availabilityStatus ? "Active" : "Inactive"}
+              <span
+                className={`text-xs font-medium ${availabilityStatus ? "text-green-500" : "text-muted-foreground"}`}
+              >
+                {availabilityStatus === null
+                  ? "Unavailable"
+                  : availabilityStatus
+                    ? "Online / Available"
+                    : "Offline / Unavailable"}
               </span>
               <Switch
-                checked={availabilityStatus}
+                checked={availabilityStatus ?? false}
                 onCheckedChange={handleAvailabilityToggle}
-                disabled={availabilityLoading}
+                disabled={availabilityLoading || availabilityStatus === null}
+                aria-label="CA Availability Status"
               />
             </div>
           </div>

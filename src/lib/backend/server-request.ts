@@ -2,7 +2,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 
 export const serverRequestInputSchema = z.object({
-  url: z.string().url().optional(),
+  url: z.string().url().optional().or(z.literal("")),
   body: z.unknown().optional(),
 });
 
@@ -13,7 +13,7 @@ export function buildServerRequest(
   input?: ServerRequestInput,
 ): Request {
   const incomingRequest = getRequest();
-  const url = input?.url ?? incomingRequest.url;
+  const url = (input?.url ?? incomingRequest.url).trim() || incomingRequest.url;
   const headers = new Headers();
   const cookie = incomingRequest.headers.get("cookie");
   if (cookie) headers.set("cookie", cookie);

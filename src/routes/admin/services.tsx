@@ -175,8 +175,8 @@ function ServicesPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-semibold">Services</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight">Services</h1>
+          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
             Manage your services and offerings
           </p>
         </div>
@@ -190,29 +190,39 @@ function ServicesPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription className="text-xs font-medium uppercase tracking-wider">Total</CardDescription>
+            <CardDescription className="text-xs font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
+              Total
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <span className="font-display text-2xl font-semibold">{items.length}</span>
-            <p className="text-xs text-muted-foreground">services</p>
+            <span className="text-2xl font-semibold tracking-tight">{items.length}</span>
+            <p className="text-xs text-[var(--color-muted-foreground)]">services</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription className="text-xs font-medium uppercase tracking-wider">Published</CardDescription>
+            <CardDescription className="text-xs font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
+              Published
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <span className="font-display text-2xl font-semibold text-emerald-600 dark:text-emerald-400">{activeCount}</span>
-            <p className="text-xs text-muted-foreground">visible on site</p>
+            <span className="text-2xl font-semibold tracking-tight text-emerald-600 dark:text-emerald-400">
+              {activeCount}
+            </span>
+            <p className="text-xs text-[var(--color-muted-foreground)]">visible on site</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription className="text-xs font-medium uppercase tracking-wider">Hidden</CardDescription>
+            <CardDescription className="text-xs font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
+              Hidden
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <span className="font-display text-2xl font-semibold text-amber-600 dark:text-amber-500">{hiddenCount}</span>
-            <p className="text-xs text-muted-foreground">not visible</p>
+            <span className="text-2xl font-semibold tracking-tight text-amber-600 dark:text-amber-500">
+              {hiddenCount}
+            </span>
+            <p className="text-xs text-[var(--color-muted-foreground)]">not visible</p>
           </CardContent>
         </Card>
       </div>
@@ -220,16 +230,18 @@ function ServicesPage() {
       {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Services</CardTitle>
+          <CardTitle className="text-base font-semibold">All Services</CardTitle>
           <CardDescription>
             {items.length} service{items.length !== 1 ? "s" : ""} configured
           </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">Loading…</div>
+            <div className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">
+              Loading…
+            </div>
           ) : sorted.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
+            <div className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">
               No services yet. Click "Add Service" to create one.
             </div>
           ) : (
@@ -248,17 +260,19 @@ function ServicesPage() {
                 <TableBody>
                   {sorted.map((s) => (
                     <TableRow key={s.id}>
-                      <TableCell className="font-mono text-sm">{s.number}</TableCell>
+                      <TableCell className="font-mono text-sm text-[var(--color-muted-foreground)]">
+                        {s.number}
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          <Briefcase className="h-4 w-4 text-muted-foreground" />
+                          <Briefcase className="h-4 w-4 text-[var(--color-muted-foreground)]" />
                           {s.title}
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                      <TableCell className="hidden md:table-cell text-sm text-[var(--color-muted-foreground)]">
                         {s.label}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground max-w-xs truncate">
+                      <TableCell className="hidden lg:table-cell text-sm text-[var(--color-muted-foreground)] max-w-xs truncate">
                         {s.description}
                       </TableCell>
                       <TableCell>

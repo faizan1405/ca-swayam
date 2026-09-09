@@ -48,9 +48,8 @@ function ContactEntriesPage() {
     setLoading(true);
     try {
       const { getAllContactEntries } = await import("@/lib/backend/services");
-      const url = filter === "all"
-        ? "/admin/contact-entries"
-        : `/admin/contact-entries?status=${filter}`;
+      const url =
+        filter === "all" ? "/admin/contact-entries" : `/admin/contact-entries?status=${filter}`;
       const data = await getAllContactEntries().then((r) => r.json());
       setItems(data ?? []);
     } catch {
@@ -71,9 +70,7 @@ function ContactEntriesPage() {
       await markContactEntryRead({
         data: { url: window.location.origin + `/admin/contact-entries/read?id=${id}` },
       });
-      setItems(prev => prev.map(item =>
-        item.id === id ? { ...item, isRead: true } : item
-      ));
+      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, isRead: true } : item)));
       toast.success("Marked as read");
     } catch {
       toast.error("Could not update entry");
@@ -87,7 +84,7 @@ function ContactEntriesPage() {
       await deleteContactEntry({
         data: { url: window.location.origin + `/admin/contact-entries?id=${id}` },
       });
-      setItems(prev => prev.filter(item => item.id !== id));
+      setItems((prev) => prev.filter((item) => item.id !== id));
       toast.success("Entry deleted");
     } catch {
       toast.error("Could not delete entry");
@@ -100,13 +97,13 @@ function ContactEntriesPage() {
     return true;
   });
 
-  const unreadCount = items.filter(i => !i.isRead).length;
+  const unreadCount = items.filter((i) => !i.isRead).length;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Contact Entries</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight">Contact Entries</h1>
+        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
           {items.length} total · {unreadCount} unread
         </p>
       </div>
@@ -115,7 +112,7 @@ function ContactEntriesPage() {
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>All Enquiries</CardTitle>
+              <CardTitle className="text-base font-semibold">All Enquiries</CardTitle>
               <CardDescription>Form submissions from the contact page</CardDescription>
             </div>
             <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
@@ -132,9 +129,11 @@ function ContactEntriesPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">Loading…</div>
+            <div className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">
+              Loading…
+            </div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
+            <div className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">
               No contact entries found
             </div>
           ) : (
@@ -167,13 +166,13 @@ function ContactEntriesPage() {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center gap-1 text-xs">
-                            <Mail className="size-3 text-muted-foreground" />
+                            <Mail className="size-3 text-[var(--color-muted-foreground)]" />
                             <a href={`mailto:${c.email}`} className="hover:text-primary">
                               {c.email}
                             </a>
                           </div>
                           <div className="flex items-center gap-1 text-xs">
-                            <Phone className="size-3 text-muted-foreground" />
+                            <Phone className="size-3 text-[var(--color-muted-foreground)]" />
                             <a href={`tel:${c.phone}`} className="hover:text-primary">
                               {c.phone}
                             </a>
@@ -183,24 +182,27 @@ function ContactEntriesPage() {
                       <TableCell>
                         <div className="space-y-1 text-xs">
                           <div className="flex items-center gap-1.5">
-                            <CalendarIcon className="size-3 text-muted-foreground" />
+                            <CalendarIcon className="size-3 text-[var(--color-muted-foreground)]" />
                             {formatContactDate(c.preferredDate)}
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <ClockIcon className="size-3 text-muted-foreground" />
+                            <ClockIcon className="size-3 text-[var(--color-muted-foreground)]" />
                             {c.preferredTime}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[200px]">
-                        <p className="truncate text-sm text-muted-foreground" title={c.message}>
+                        <p
+                          className="truncate text-sm text-[var(--color-muted-foreground)]"
+                          title={c.message}
+                        >
                           {c.message}
                         </p>
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant={c.isRead ? "secondary" : "default"}
-                          className="text-[10px]"
+                          className="text-[10px] h-5"
                         >
                           {c.isRead ? "Read" : "Unread"}
                         </Badge>
@@ -212,22 +214,18 @@ function ContactEntriesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleMarkRead(c.id)}
-                              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                              className="h-8 w-8 p-0 text-[var(--color-muted-foreground)] hover:text-primary"
                               title="Mark as read"
                             >
                               <Eye className="h-4 w-4" />
                               <span className="sr-only">Mark as read</span>
                             </Button>
                           )}
-                          <Link
-                            to="/contact"
-                            className="inline-flex"
-                            title="View contact page"
-                          >
+                          <Link to="/contact" className="inline-flex" title="View contact page">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                              className="h-8 w-8 p-0 text-[var(--color-muted-foreground)] hover:text-primary"
                             >
                               <ArrowUpRight className="h-4 w-4" />
                               <span className="sr-only">Open contact</span>

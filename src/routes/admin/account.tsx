@@ -113,10 +113,14 @@ function AccountPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="font-display text-3xl font-semibold">Account</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Manage your admin account</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
+          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+            Manage your admin account
+          </p>
         </div>
-        <div className="py-12 text-center text-sm text-muted-foreground">Loading…</div>
+        <div className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">
+          Loading…
+        </div>
       </div>
     );
   }
@@ -124,8 +128,8 @@ function AccountPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Account</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
+        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
           Manage your admin account details and password
         </p>
       </div>
@@ -133,7 +137,7 @@ function AccountPage() {
       {/* Profile */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
             <ShieldCheck className="h-5 w-5" />
             Profile Information
           </CardTitle>
@@ -187,7 +191,7 @@ function AccountPage() {
       {/* Password */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
             <KeyRound className="h-5 w-5" />
             Change Password
           </CardTitle>
@@ -201,59 +205,59 @@ function AccountPage() {
               void handleChangePassword();
             }}
           >
-          <div className="space-y-2">
-            <Label htmlFor="currentPassword">Current Password</Label>
-            <Input
-              id="currentPassword"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="newPassword">New Password</Label>
-            <Input
-              id="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm New Password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-          </div>
-
-          {passwordMessage && (
-            <div
-              role="alert"
-              className={`rounded-md border p-3 text-sm ${
-                passwordMessage.type === "success"
-                  ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                  : "border-destructive/50 bg-destructive/10 text-destructive"
-              }`}
-            >
-              {passwordMessage.text}
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Current Password</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+              />
             </div>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
 
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {passwordSaving ? "Updating…" : "Update password"}
-            </Button>
-          </div>
+            {passwordMessage && (
+              <div
+                role="alert"
+                className={`rounded-md border p-3 text-sm ${
+                  passwordMessage.type === "success"
+                    ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                    : "border-destructive/50 bg-destructive/10 text-destructive"
+                }`}
+              >
+                {passwordMessage.text}
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {passwordSaving ? "Updating…" : "Update password"}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

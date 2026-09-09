@@ -67,28 +67,31 @@ async function updateSiteInfoHandler(request: Request) {
 
   if (!existing) {
     const now = new Date();
-    const [result] = await db.insert(siteInfo).values({
-      id: "site",
-      businessName: parsed.data.businessName ?? "",
-      tagline: parsed.data.tagline ?? "",
-      ownerName: parsed.data.ownerName ?? "",
-      phone: parsed.data.phone ?? "",
-      whatsapp: parsed.data.whatsapp ?? "",
-      email: parsed.data.email ?? "",
-      address: parsed.data.address ?? "",
-      aboutText: parsed.data.aboutText ?? "",
-      shortDescription: parsed.data.shortDescription ?? "",
-      instagram: parsed.data.instagram ?? "",
-      facebook: parsed.data.facebook ?? "",
-      linkedin: parsed.data.linkedin ?? "",
-      youtube: parsed.data.youtube ?? "",
-      businessHours: parsed.data.businessHours ?? "",
-      heroHeading: parsed.data.heroHeading ?? "",
-      heroSubtext: parsed.data.heroSubtext ?? "",
-      heroDescription: parsed.data.heroDescription ?? "",
-      createdAt: now,
-      updatedAt: now,
-    }).returning();
+    const [result] = await db
+      .insert(siteInfo)
+      .values({
+        id: "site",
+        businessName: parsed.data.businessName ?? "",
+        tagline: parsed.data.tagline ?? "",
+        ownerName: parsed.data.ownerName ?? "",
+        phone: parsed.data.phone ?? "",
+        whatsapp: parsed.data.whatsapp ?? "",
+        email: parsed.data.email ?? "",
+        address: parsed.data.address ?? "",
+        aboutText: parsed.data.aboutText ?? "",
+        shortDescription: parsed.data.shortDescription ?? "",
+        instagram: parsed.data.instagram ?? "",
+        facebook: parsed.data.facebook ?? "",
+        linkedin: parsed.data.linkedin ?? "",
+        youtube: parsed.data.youtube ?? "",
+        businessHours: parsed.data.businessHours ?? "",
+        heroHeading: parsed.data.heroHeading ?? "",
+        heroSubtext: parsed.data.heroSubtext ?? "",
+        heroDescription: parsed.data.heroDescription ?? "",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
     return Response.json(result);
   }
 
@@ -115,17 +118,22 @@ async function updateAvailabilityStatusHandler(request: Request) {
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => null);
-  if (!body || typeof body.isActive !== "boolean") {
+  const parsed = z.object({ isActive: z.boolean() }).safeParse(body);
+  if (!parsed.success) {
     return Response.json({ error: "isActive boolean is required" }, { status: 400 });
   }
 
   const [result] = await db
     .update(siteInfo)
-    .set({ isActive: body.isActive, updatedAt: new Date() })
+    .set({ isActive: parsed.data.isActive, updatedAt: new Date() })
     .where(eq(siteInfo.id, "site"))
     .returning();
 
-  return Response.json(result);
+  if (!result) {
+    return Response.json({ error: "Site information not found" }, { status: 404 });
+  }
+
+  return Response.json({ isActive: result.isActive });
 }
 
 export const getSiteInfo = createServerFn({ method: "GET" }).handler(() =>

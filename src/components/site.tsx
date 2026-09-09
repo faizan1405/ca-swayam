@@ -80,11 +80,11 @@ export function useContactInfo() {
 }
 
 export type AvailabilityStatus = {
-  isActive: boolean;
+  isActive: boolean | null;
 };
 
 export function useAvailabilityStatus() {
-  const [status, setStatus] = useState<AvailabilityStatus>({ isActive: true });
+  const [status, setStatus] = useState<AvailabilityStatus>({ isActive: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -97,9 +97,12 @@ export function useAvailabilityStatus() {
         if (!res.ok) throw new Error("Failed to load availability");
         const data = await res.json();
         if (cancelled) return;
-        setStatus({ isActive: data?.isActive ?? true });
+        if (typeof data?.isActive !== "boolean") {
+          throw new Error("Availability status is missing");
+        }
+        setStatus({ isActive: data.isActive });
       } catch {
-        // keep default
+        // Do not show a guessed status when the database value cannot be loaded.
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -114,7 +117,13 @@ export function useAvailabilityStatus() {
   return { status, loading };
 }
 
-export function AvailabilityBadge({ isActive, className = "" }: { isActive: boolean; className?: string }) {
+export function AvailabilityBadge({
+  isActive,
+  className = "",
+}: {
+  isActive: boolean;
+  className?: string;
+}) {
   if (isActive) {
     return (
       <span
@@ -134,7 +143,7 @@ export function AvailabilityBadge({ isActive, className = "" }: { isActive: bool
       className={`inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground ${className}`}
     >
       <span className="inline-flex h-2.5 w-2.5 rounded-full bg-muted-foreground/50" />
-      Currently Inactive
+      Offline / Unavailable
     </span>
   );
 }
@@ -454,7 +463,7 @@ export function SiteFooter({
   addressRaipur: string;
   icaiMembership: string;
   frn: string;
-  isActive?: boolean;
+  isActive: boolean | null;
 }) {
   return (
     <footer className="border-t border-border bg-secondary px-6 py-14 text-secondary-foreground sm:py-20">
@@ -474,22 +483,9 @@ export function SiteFooter({
             Swayam Goyal &amp; Associates, Chartered Accountants. Founded in 2017, with offices in
             Surajpur and Raipur, Chhattisgarh.
           </p>
-          {isActive !== undefined && (
+          {isActive !== null && (
             <div className="mt-4">
-              {isActive ? (
-                <span className="inline-flex items-center gap-2 rounded-full bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600 dark:text-green-400">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
-                  </span>
-                  Online / Available
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                  <span className="inline-flex h-2.5 w-2.5 rounded-full bg-muted-foreground/50" />
-                  Currently Inactive
-                </span>
-              )}
+              <AvailabilityBadge isActive={isActive} />
             </div>
           )}
         </div>

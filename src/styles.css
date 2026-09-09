@@ -26,6 +26,13 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-whatsapp: var(--whatsapp);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-hover: var(--sidebar-bg-hover);
+  --color-sidebar-active: var(--sidebar-bg-active);
+  --color-sidebar-active-text: var(--sidebar-text-active);
+  --color-sidebar-border: var(--sidebar-border);
 }
 
 :root {
@@ -49,6 +56,19 @@
   --ring: oklch(0.64 0.13 52 / 50%);
   --whatsapp: oklch(0.72 0.18 151);
   --shadow-soft: 0 24px 80px oklch(0.23 0.035 205 / 10%), 0 6px 24px oklch(0.23 0.035 205 / 7%);
+}
+
+/* ── Admin sidebar tokens ── */
+:root {
+  --sidebar-bg: oklch(0.15 0.04 155);
+  --sidebar-bg-hover: oklch(1 0 0 / 0.06);
+  --sidebar-bg-active: oklch(0.64 0.13 52);
+  --sidebar-bg-active-hover: oklch(0.64 0.13 52 / 0.85);
+  --sidebar-text: oklch(0.72 0.015 90);
+  --sidebar-text-muted: oklch(0.5 0.015 90);
+  --sidebar-text-active: oklch(0.98 0.008 90);
+  --sidebar-border: oklch(1 0 0 / 0.08);
+  --sidebar-width: 250px;
 }
 
 @theme {
