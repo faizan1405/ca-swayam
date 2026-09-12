@@ -1,21 +1,24 @@
 import { createServerFn } from "@tanstack/react-start";
 import Razorpay from "razorpay";
 import { z } from "zod";
-import { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET } from "./env";
+import { getRazorpayKeyId, getRazorpayKeySecret } from "./env";
 import { buildServerRequest, serverRequestInputSchema } from "../server-request";
 import { db, consultations, consultationFormats } from "../db";
 import { eq } from "drizzle-orm";
 
-const razorpay = new Razorpay({
-  key_id: RAZORPAY_KEY_ID,
-  key_secret: RAZORPAY_KEY_SECRET,
-});
+
 
 const createOrderInputSchema = z.object({
   consultationId: z.string().min(1),
 });
 
 async function createPaymentOrderHandler(request: Request) {
+  const keyId = getRazorpayKeyId();
+  const razorpay = new Razorpay({
+    key_id: keyId,
+    key_secret: getRazorpayKeySecret(),
+  });
+  
   const body = await request.json();
   const parsed = createOrderInputSchema.safeParse(body);
   if (!parsed.success) {
@@ -113,7 +116,7 @@ async function createPaymentOrderHandler(request: Request) {
     .where(eq(consultations.id, consultation.id));
 
   const responseBody: Record<string, unknown> = {
-    keyId: RAZORPAY_KEY_ID,
+    keyId: keyId,
     orderId: razorpayOrder.id,
     amount: razorpayOrder.amount,
     currency: razorpayOrder.currency,

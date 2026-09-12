@@ -1,4 +1,4 @@
-import { RAZORPAY_KEY_ID } from "./env";
+import { getRazorpayKeyId } from "./env";
 
 export type FormatFeeEntry = {
   formatName: string;
@@ -25,5 +25,5 @@ export function formatCurrencyFromPaise(paise: number): string {
 }
 
 export function getKeyId(): string {
-  return RAZORPAY_KEY_ID;
+  return getRazorpayKeyId();
 }

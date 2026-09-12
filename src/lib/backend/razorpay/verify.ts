@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
 import { db, consultations } from "../db";
-import { RAZORPAY_KEY_SECRET } from "./env";
+import { getRazorpayKeySecret } from "./env";
 import { buildServerRequest, serverRequestInputSchema } from "../server-request";
 import { eq } from "drizzle-orm";
 
@@ -29,7 +29,7 @@ async function verifyRazorpaySignature(
   try {
     const payload = `${orderId}|${paymentId}`;
     const encoder = new TextEncoder();
-    const keyData = encoder.encode(RAZORPAY_KEY_SECRET);
+    const keyData = encoder.encode(getRazorpayKeySecret());
     const payloadData = encoder.encode(payload);
 
     const cryptoKey = await crypto.subtle.importKey(

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { db, consultations } from "@/lib/backend/db";
-import { RAZORPAY_WEBHOOK_SECRET } from "@/lib/backend/razorpay/env";
+import { getRazorpayWebhookSecret } from "@/lib/backend/razorpay/env";
 import { eq } from "drizzle-orm";
 
 // @ts-ignore - API route not in auto-generated FileRoutesByPath
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/razorpay/webhook")({
         const payload = await request.text();
 
         const encoder = new TextEncoder();
-        const keyData = encoder.encode(RAZORPAY_WEBHOOK_SECRET);
+        const keyData = encoder.encode(getRazorpayWebhookSecret());
         const payloadData = encoder.encode(payload);
 
         let isValidWebhook = false;

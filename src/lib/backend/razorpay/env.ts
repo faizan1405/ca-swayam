@@ -1,19 +1,19 @@
 import "@tanstack/react-start/server-only";
 
-export const RAZORPAY_KEY_ID = (() => {
+export const getRazorpayKeyId = () => {
   const value = process.env["RAZORPAY_KEY_ID"];
   if (!value) throw new Error("RAZORPAY_KEY_ID must be set");
   return value;
-})();
+};
 
-export const RAZORPAY_KEY_SECRET = (() => {
+export const getRazorpayKeySecret = () => {
   const value = process.env["RAZORPAY_KEY_SECRET"];
   if (!value) throw new Error("RAZORPAY_KEY_SECRET must be set");
   return value;
-})();
+};
 
-export const RAZORPAY_WEBHOOK_SECRET = (() => {
+export const getRazorpayWebhookSecret = () => {
   const value = process.env["RAZORPAY_WEBHOOK_SECRET"];
   if (!value) throw new Error("RAZORPAY_WEBHOOK_SECRET must be set");
   return value;
-})();
+};
