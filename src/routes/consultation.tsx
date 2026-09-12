@@ -71,6 +71,7 @@ type FormErrors = Partial<Record<"name" | "phone" | "email" | "type" | "date" | 
 function ConsultationPage() {
   const [formats, setFormats] = useState<ConsultationFormat[]>([]);
   const [loadingFormats, setLoadingFormats] = useState(true);
+  const [formatLoadError, setFormatLoadError] = useState(false);
   const [times, setTimes] = useState<string[]>(DEFAULT_TIMES);
   const [phoneForWa, setPhoneForWa] = useState(DEFAULT_WA_NUMBER);
 
@@ -171,13 +172,14 @@ function ConsultationPage() {
         const formatsList = data as ConsultationFormat[];
         setFormats(formatsList);
         setLoadingFormats(false);
-        if (data.length > 0 && !selectedFormatId) {
-          setSelectedFormatId(data[0]!.id);
+        if (formatsList.length > 0 && !selectedFormatId) {
+          setSelectedFormatId(formatsList[0]!.id);
         }
       })
       .catch((err) => {
         console.error("Failed to fetch formats:", err);
         setLoadingFormats(false);
+        setFormatLoadError(true);
       });
   }, []);
 
@@ -617,45 +619,47 @@ function ConsultationPage() {
               <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">
                 Consultation Type <span className="text-destructive">*</span>
               </label>
-              <div className="mt-2">
-                <Select
+              <div className="mt-2 relative">
+                <Tag className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <select
                   value={selectedFormatId}
-                  onValueChange={(val) => {
-                    setSelectedFormatId(val);
+                  onChange={(e) => {
+                    setSelectedFormatId(e.target.value);
                     if (errors.type) setErrors((prev) => ({ ...prev, type: "" }));
                   }}
-                  disabled={loadingFormats}
+                  disabled={loadingFormats || formats.length === 0}
+                  aria-invalid={!!errors.type}
+                  className={`h-12 w-full appearance-none rounded-xl border bg-background pl-10 pr-10 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring ${errors.type ? "border-destructive" : "border-input"}`}
                 >
-                  <SelectTrigger
-                    aria-invalid={!!errors.type}
-                    className={errors.type ? "border-destructive" : ""}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Tag className="size-4 shrink-0 text-muted-foreground" />
-                      <SelectValue placeholder={loadingFormats ? "Loading types..." : "Select a consultation type"} />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formats.map((fmt) => (
-                      <SelectItem key={fmt.id} value={fmt.id}>
-                        <div className="flex flex-col">
-                          <span>{fmt.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            <span className="inline-flex items-center gap-1">
-                              <DollarSign className="size-3" />
-                              {fmt.fee.toLocaleString("en-IN")}
-                            </span>
-                            {" "}
-                            {fmt.duration}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {loadingFormats ? (
+                    <option value="">Loading consultation types...</option>
+                  ) : formats.length === 0 && !formatLoadError ? (
+                    <option value="">No consultation types are currently available.</option>
+                  ) : formatLoadError ? (
+                    <option value="">Error loading consultation types</option>
+                  ) : (
+                    <>
+                      <option value="" disabled>Select a consultation type</option>
+                      {formats.map((fmt) => (
+                        <option key={fmt.id} value={fmt.id}>
+                          {fmt.name} — ₹{fmt.fee.toLocaleString("en-IN")}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
               </div>
-              {errors.type && <p role="alert" className="mt-1.5 text-xs text-destructive">{errors.type}</p>}
-
+              
+              {formatLoadError && (
+                <p role="alert" className="mt-2 text-sm font-medium text-destructive">
+                  Unable to load consultation types. Please refresh or try again.
+                </p>
+              )}
+              {errors.type && !formatLoadError && <p role="alert" className="mt-1.5 text-xs text-destructive">{errors.type}</p>}
+              
               {selectedFormat && (
                 <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                   <DollarSign className="size-3.5 shrink-0 text-primary" />
@@ -771,7 +775,7 @@ function ConsultationPage() {
             {/* Submit / Payment Button */}
             <Button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || (!loadingFormats && formats.length === 0)}
               className="magnetic-button h-auto w-full rounded-xl bg-primary px-5 py-4 text-xs font-bold uppercase tracking-[0.14em] text-primary-foreground hover:bg-primary"
             >
               {submitting ? (
