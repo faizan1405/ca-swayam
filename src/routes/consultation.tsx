@@ -167,15 +167,16 @@ function ConsultationPage() {
       .catch(() => {});
 
     listFormats()
-      .then((res) => res.json())
-      .then((data: ConsultationFormat[]) => {
-        setFormats(data);
+      .then((data: any) => {
+        const formatsList = data as ConsultationFormat[];
+        setFormats(formatsList);
         setLoadingFormats(false);
         if (data.length > 0 && !selectedFormatId) {
           setSelectedFormatId(data[0]!.id);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Failed to fetch formats:", err);
         setLoadingFormats(false);
       });
   }, []);
@@ -228,7 +229,7 @@ function ConsultationPage() {
         String(selectedDate!.getDate()).padStart(2, "0"),
       ].join("-");
 
-      const submitRes = await submitConsultation({
+      const submitRes: any = await submitConsultation({
         data: {
           body: {
             name: name.trim(),
@@ -242,19 +243,17 @@ function ConsultationPage() {
         },
       });
 
-      if (!submitRes.ok) {
-        const data = await submitRes.json().catch(() => ({}));
-        const errorMsg = typeof data.error === "string" ? data.error : "Could not submit your request. Please try again.";
-        toast.error(errorMsg);
+      if (submitRes?.error) {
+        toast.error(typeof submitRes.error === "string" ? submitRes.error : "Could not submit your request. Please try again.");
         setSubmitting(false);
         return;
       }
 
-      const booking = await submitRes.json();
+      const booking = submitRes;
       setBookingId(booking.id);
 
       // Step 2: Create Razorpay order
-      const orderRes = await createPaymentOrder({
+      const orderRes: any = await createPaymentOrder({
         data: {
           body: {
             consultationId: booking.id,
@@ -262,15 +261,13 @@ function ConsultationPage() {
         },
       });
 
-      if (!orderRes.ok) {
-        const data = await orderRes.json().catch(() => ({}));
-        const errorMsg = typeof data.error === "string" ? data.error : "Could not create payment order. Please try again.";
-        toast.error(errorMsg);
+      if (orderRes?.error) {
+        toast.error(typeof orderRes.error === "string" ? orderRes.error : "Could not create payment order. Please try again.");
         setSubmitting(false);
         return;
       }
 
-      const orderData = await orderRes.json();
+      const orderData = orderRes;
 
       // Step 3: Open Razorpay Checkout
       if (!razorpayLoaded || !(window as unknown as Record<string, unknown>)["Razorpay"]) {
@@ -307,7 +304,7 @@ function ConsultationPage() {
           razorpay_signature: string;
         }) => {
           try {
-            const verifyRes = await verifyPayment({
+            const verifyRes: any = await verifyPayment({
               data: {
                 body: {
                   razorpay_payment_id: response.razorpay_payment_id,
@@ -318,8 +315,8 @@ function ConsultationPage() {
               },
             });
 
-            if (verifyRes.ok) {
-              const verifyData = await verifyRes.json();
+            if (!verifyRes?.error) {
+              const verifyData = verifyRes;
               if (verifyData.success) {
                 setPaymentSuccess(true);
                 setPaymentDetails({
@@ -335,8 +332,7 @@ function ConsultationPage() {
                 toast.error("Payment verification failed. Please contact support.");
               }
             } else {
-              const data = await verifyRes.json().catch(() => ({}));
-              toast.error(typeof data.error === "string" ? data.error : "Payment verification failed. Please contact support.");
+              toast.error(typeof verifyRes.error === "string" ? verifyRes.error : "Payment verification failed. Please contact support.");
             }
           } catch {
             toast.error("Could not verify payment. Please contact support.");
@@ -370,7 +366,7 @@ function ConsultationPage() {
     // The booking ID is already set, so we just need to try payment again
     setSubmitting(true);
     try {
-      const orderRes = await createPaymentOrder({
+      const orderRes: any = await createPaymentOrder({
         data: {
           body: {
             consultationId: bookingId!,
@@ -378,14 +374,13 @@ function ConsultationPage() {
         },
       });
 
-      if (!orderRes.ok) {
-        const data = await orderRes.json().catch(() => ({}));
-        toast.error(typeof data.error === "string" ? data.error : "Could not create payment order.");
+      if (orderRes?.error) {
+        toast.error(typeof orderRes.error === "string" ? orderRes.error : "Could not create payment order.");
         setSubmitting(false);
         return;
       }
 
-      const orderData = await orderRes.json();
+      const orderData = orderRes;
 
       if (!razorpayLoaded || !(window as unknown as Record<string, unknown>)["Razorpay"]) {
         toast.error("Payment system not ready. Please wait.");
@@ -419,7 +414,7 @@ function ConsultationPage() {
           razorpay_signature: string;
         }) => {
           try {
-            const verifyRes = await verifyPayment({
+            const verifyRes: any = await verifyPayment({
               data: {
                 body: {
                   razorpay_payment_id: response.razorpay_payment_id,
@@ -430,8 +425,8 @@ function ConsultationPage() {
               },
             });
 
-            if (verifyRes.ok) {
-              const verifyData = await verifyRes.json();
+            if (!verifyRes?.error) {
+              const verifyData = verifyRes;
               if (verifyData.success) {
                 setPaymentSuccess(true);
                 setPaymentDetails({

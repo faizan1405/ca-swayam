@@ -44,9 +44,7 @@ async function adminLoginHandler(request: Request) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const admin = await db.query.admins.findFirst({
-    where: (a, { eq }) => eq(a.email, parsed.data.email),
-  });
+  const [admin] = await db.select().from(admins).where(eq(admins.email, parsed.data.email)).limit(1);
 
   if (!admin) {
     return Response.json({ error: "Invalid email or password" }, { status: 401 });
@@ -111,9 +109,7 @@ async function changePasswordHandler(request: Request) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const admin = await db.query.admins.findFirst({
-    where: (a, { eq }) => eq(a.id, session.adminId),
-  });
+  const [admin] = await db.select().from(admins).where(eq(admins.id, session.adminId)).limit(1);
 
   if (!admin) {
     return Response.json({ error: "Admin not found" }, { status: 404 });
@@ -146,13 +142,11 @@ async function updateAdminProfileHandler(request: Request) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const updates: { name?: string; email?: string } = {};
+  const updates: { name?: string; email?: string; passwordHash?: string } = {};
   if (parsed.data.name) updates.name = parsed.data.name;
   if (parsed.data.email) {
     // Check email is not taken by another admin
-    const existing = await db.query.admins.findFirst({
-      where: (a, { eq }) => eq(a.email, parsed.data.email!),
-    });
+    const [existing] = await db.select().from(admins).where(eq(admins.email, parsed.data.email!)).limit(1);
     if (existing && existing.id !== session.adminId) {
       return Response.json({ error: "Email already in use" }, { status: 400 });
     }
