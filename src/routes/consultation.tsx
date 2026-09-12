@@ -167,20 +167,31 @@ function ConsultationPage() {
       )
       .catch(() => {});
 
-    listFormats()
-      .then((data: any) => {
-        const formatsList = data as ConsultationFormat[];
-        setFormats(formatsList);
-        setLoadingFormats(false);
-        if (formatsList.length > 0 && !selectedFormatId) {
-          setSelectedFormatId(formatsList[0]!.id);
+    const loadFormats = async () => {
+      try {
+        const response = await listFormats();
+        if (!response.ok) {
+          throw new Error(`Failed to load consultation formats (${response.status})`);
         }
-      })
-      .catch((err) => {
+
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+          throw new Error("Invalid consultation formats response");
+        }
+
+        setFormats(data);
+        setLoadingFormats(false);
+        if (data.length > 0 && !selectedFormatId) {
+          setSelectedFormatId(data[0]!.id);
+        }
+      } catch (err) {
         console.error("Failed to fetch formats:", err);
         setLoadingFormats(false);
         setFormatLoadError(true);
-      });
+      }
+    };
+
+    void loadFormats();
   }, []);
 
   const today = useMemo(() => {
@@ -231,7 +242,7 @@ function ConsultationPage() {
         String(selectedDate!.getDate()).padStart(2, "0"),
       ].join("-");
 
-      const submitRes: any = await submitConsultation({
+      const submitResponse = await submitConsultation({
         data: {
           body: {
             name: name.trim(),
@@ -244,32 +255,31 @@ function ConsultationPage() {
           },
         },
       });
+      const booking = await submitResponse.json();
 
-      if (submitRes?.error) {
-        toast.error(typeof submitRes.error === "string" ? submitRes.error : "Could not submit your request. Please try again.");
+      if (!submitResponse.ok || booking?.error) {
+        toast.error(typeof booking?.error === "string" ? booking.error : "Could not submit your request. Please try again.");
         setSubmitting(false);
         return;
       }
 
-      const booking = submitRes;
       setBookingId(booking.id);
 
       // Step 2: Create Razorpay order
-      const orderRes: any = await createPaymentOrder({
+      const orderResponse = await createPaymentOrder({
         data: {
           body: {
             consultationId: booking.id,
           },
         },
       });
+      const orderData = await orderResponse.json();
 
-      if (orderRes?.error) {
-        toast.error(typeof orderRes.error === "string" ? orderRes.error : "Could not create payment order. Please try again.");
+      if (!orderResponse.ok || orderData?.error) {
+        toast.error(typeof orderData?.error === "string" ? orderData.error : "Could not create payment order. Please try again.");
         setSubmitting(false);
         return;
       }
-
-      const orderData = orderRes;
 
       // Step 3: Open Razorpay Checkout
       if (!razorpayLoaded || !(window as unknown as Record<string, unknown>)["Razorpay"]) {
@@ -306,7 +316,7 @@ function ConsultationPage() {
           razorpay_signature: string;
         }) => {
           try {
-            const verifyRes: any = await verifyPayment({
+            const verifyResponse = await verifyPayment({
               data: {
                 body: {
                   razorpay_payment_id: response.razorpay_payment_id,
@@ -316,25 +326,21 @@ function ConsultationPage() {
                 },
               },
             });
+            const verifyData = await verifyResponse.json();
 
-            if (!verifyRes?.error) {
-              const verifyData = verifyRes;
-              if (verifyData.success) {
-                setPaymentSuccess(true);
-                setPaymentDetails({
-                  consultationType: selectedFormat?.name ?? "Consultation",
-                  amountPaid: orderData.amount / 100,
-                  date: selectedDate ? selectedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : dateStr,
-                  time: selectedTime,
-                  bookingReference: booking.id,
-                });
-                toast.success("Payment successful! Your consultation has been booked.");
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              } else {
-                toast.error("Payment verification failed. Please contact support.");
-              }
+            if (!verifyResponse.ok || verifyData?.error || !verifyData?.success) {
+              toast.error(typeof verifyData?.error === "string" ? verifyData.error : "Payment verification failed. Please contact support.");
             } else {
-              toast.error(typeof verifyRes.error === "string" ? verifyRes.error : "Payment verification failed. Please contact support.");
+              setPaymentSuccess(true);
+              setPaymentDetails({
+                consultationType: selectedFormat?.name ?? "Consultation",
+                amountPaid: orderData.amount / 100,
+                date: selectedDate ? selectedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : dateStr,
+                time: selectedTime,
+                bookingReference: booking.id,
+              });
+              toast.success("Payment successful! Your consultation has been booked.");
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }
           } catch {
             toast.error("Could not verify payment. Please contact support.");
@@ -368,21 +374,20 @@ function ConsultationPage() {
     // The booking ID is already set, so we just need to try payment again
     setSubmitting(true);
     try {
-      const orderRes: any = await createPaymentOrder({
+      const orderResponse = await createPaymentOrder({
         data: {
           body: {
             consultationId: bookingId!,
           },
         },
       });
+      const orderData = await orderResponse.json();
 
-      if (orderRes?.error) {
-        toast.error(typeof orderRes.error === "string" ? orderRes.error : "Could not create payment order.");
+      if (!orderResponse.ok || orderData?.error) {
+        toast.error(typeof orderData?.error === "string" ? orderData.error : "Could not create payment order.");
         setSubmitting(false);
         return;
       }
-
-      const orderData = orderRes;
 
       if (!razorpayLoaded || !(window as unknown as Record<string, unknown>)["Razorpay"]) {
         toast.error("Payment system not ready. Please wait.");
@@ -416,7 +421,7 @@ function ConsultationPage() {
           razorpay_signature: string;
         }) => {
           try {
-            const verifyRes: any = await verifyPayment({
+            const verifyResponse = await verifyPayment({
               data: {
                 body: {
                   razorpay_payment_id: response.razorpay_payment_id,
@@ -426,21 +431,21 @@ function ConsultationPage() {
                 },
               },
             });
+            const verifyData = await verifyResponse.json();
 
-            if (!verifyRes?.error) {
-              const verifyData = verifyRes;
-              if (verifyData.success) {
-                setPaymentSuccess(true);
-                setPaymentDetails({
-                  consultationType: selectedFormat?.name ?? "Consultation",
-                  amountPaid: orderData.amount / 100,
-                  date: selectedDate ? selectedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : "",
-                  time: selectedTime,
-                  bookingReference: bookingId!,
-                });
-                toast.success("Payment successful! Your consultation has been booked.");
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }
+            if (!verifyResponse.ok || verifyData?.error || !verifyData?.success) {
+              toast.error(typeof verifyData?.error === "string" ? verifyData.error : "Payment verification failed. Please contact support.");
+            } else {
+              setPaymentSuccess(true);
+              setPaymentDetails({
+                consultationType: selectedFormat?.name ?? "Consultation",
+                amountPaid: orderData.amount / 100,
+                date: selectedDate ? selectedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : "",
+                time: selectedTime,
+                bookingReference: bookingId!,
+              });
+              toast.success("Payment successful! Your consultation has been booked.");
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }
           } catch {
             // handled below
@@ -494,7 +499,7 @@ function ConsultationPage() {
             <Card className="mt-8 text-left">
               <CardContent className="p-6 space-y-3">
                 <BookingDetail label="Consultation Type" value={paymentDetails.consultationType} />
-                <BookingDetail label="Amount Paid" value={`${(paymentDetails.amountPaid / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                <BookingDetail label="Amount Paid" value={paymentDetails.amountPaid.toLocaleString("en-IN", { style: "currency", currency: "INR" })} />
                 <BookingDetail label="Preferred Date" value={paymentDetails.date} />
                 <BookingDetail label="Preferred Time" value={paymentDetails.time} />
                 <BookingDetail label="Booking Reference" value={paymentDetails.bookingReference} mono />
