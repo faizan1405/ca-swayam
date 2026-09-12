@@ -3,7 +3,7 @@
  */
 
 import bcrypt from "bcryptjs";
-import { NODE_ENV, SESSION_SECRET } from "./env";
+import { NODE_ENV, getSessionSecret } from "./env";
 import { db, admins } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -74,7 +74,7 @@ async function verifyToken(sessionToken: string): Promise<SessionPayload | null>
 async function getSigningKey(keyUsages: KeyUsage[]): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(SESSION_SECRET),
+    new TextEncoder().encode(getSessionSecret()),
     { name: "HMAC", hash: "SHA-256" },
     false,
     keyUsages,

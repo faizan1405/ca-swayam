@@ -1,20 +1,31 @@
 import "@tanstack/react-start/server-only";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { DATABASE_URL } from "./database-url";
+import { getDatabaseUrl } from "./database-url";
 import * as schema from "./schema";
 
-// Keep each warm serverless instance to one connection. Use the pooled URL
-// supplied by the Vercel Marketplace integration when the provider offers one.
-const client = postgres(DATABASE_URL, {
-  max: 1,
-  idle_timeout: 20,
-  connect_timeout: 10,
-  prepare: false,
+let _client: ReturnType<typeof postgres> | undefined;
+let _db: ReturnType<typeof drizzle> | undefined;
+
+function initDb() {
+  if (_db) return _db;
+  const url = getDatabaseUrl();
+  _client = postgres(url, {
+    max: 1,
+    idle_timeout: 20,
+    connect_timeout: 10,
+    prepare: false,
+  });
+  _db = drizzle(_client, { schema });
+  return _db;
+}
+
+export type DbType = ReturnType<typeof drizzle>;
+
+export const db = new Proxy({} as DbType, {
+  get(target, prop) {
+    return Reflect.get(initDb(), prop);
+  }
 });
-
-export const db = drizzle(client, { schema });
-
-export type DbType = typeof db;
 
 export * from "./schema";
