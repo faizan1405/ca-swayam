@@ -5,7 +5,8 @@ import { db, consultations, consultationFormats } from "../db";
 import { getSession } from "../auth";
 import { buildServerRequest, serverRequestInputSchema } from "../server-request";
 
-// Public submit (no auth) — used by the consultation page
+// ─── Public submit ────────────────────────────────────────────────────────────
+
 async function submitConsultationHandler(request: Request) {
   const body = await request.json();
   const parsed = consultationSubmitSchema.safeParse(body);
@@ -43,7 +44,6 @@ async function submitConsultationHandler(request: Request) {
     );
   }
 
-  // Validate format and determine fee server-side
   const [format] = await db
     .select({ fee: consultationFormats.fee })
     .from(consultationFormats)
@@ -67,7 +67,7 @@ async function submitConsultationHandler(request: Request) {
       fee: format.fee,
       date: consultationDate,
       time: parsed.data.time,
-      status: "pending",
+      status: "pending_payment",
       note: parsed.data.note ?? null,
       createdAt: now,
       updatedAt: now,
@@ -77,7 +77,8 @@ async function submitConsultationHandler(request: Request) {
   return Response.json(result, { status: 201 });
 }
 
-// Admin queries
+// ─── Admin queries ─────────────────────────────────────────────────────────────
+
 async function listConsultationsHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -89,7 +90,18 @@ async function listConsultationsHandler(request: Request) {
   const offset = (page - 1) * limit;
 
   const conditions = status
-    ? [eq(consultations.status, status as "pending" | "confirmed" | "cancelled" | "completed")]
+    ? [
+        eq(
+          consultations.status,
+          status as
+            | "pending_payment"
+            | "pending"
+            | "confirmed"
+            | "cancelled"
+            | "completed"
+            | "payment_failed",
+        ),
+      ]
     : [];
 
   const rows = await db
@@ -108,6 +120,12 @@ async function listConsultationsHandler(request: Request) {
       updatedAt: consultations.updatedAt,
       consultationType: consultationFormats.name,
       consultationDuration: consultationFormats.duration,
+      razorpayOrderId: consultations.razorpayOrderId,
+      razorpayPaymentId: consultations.razorpayPaymentId,
+      paymentStatus: consultations.paymentStatus,
+      paymentVerifiedAt: consultations.paymentVerifiedAt,
+      currency: consultations.currency,
+      amountPaid: consultations.amountPaid,
     })
     .from(consultations)
     .leftJoin(consultationFormats, eq(consultations.formatId, consultationFormats.id))
@@ -124,6 +142,10 @@ async function getConsultationStatsHandler(request: Request) {
   const session = await getSession(request);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  const [pendingPayment] = await db
+    .select({ count: count() })
+    .from(consultations)
+    .where(eq(consultations.status, "pending_payment"));
   const [pending] = await db
     .select({ count: count() })
     .from(consultations)
@@ -149,6 +171,7 @@ async function getConsultationStatsHandler(request: Request) {
 
   return Response.json({
     total: all?.count ?? 0,
+    pendingPayment: pendingPayment?.count ?? 0,
     pending: pending?.count ?? 0,
     confirmed: confirmed?.count ?? 0,
     completed: completed?.count ?? 0,
@@ -196,6 +219,8 @@ async function listFormatsHandler() {
   return Response.json(all.filter((f) => f.isActive));
 }
 
+// ─── Schemas ──────────────────────────────────────────────────────────────────
+
 const consultationSubmitSchema = z.object({
   name: z.string().min(1).max(255),
   contact: z.string().min(1).max(255),
@@ -210,8 +235,17 @@ const consultationSubmitSchema = z.object({
 });
 
 const updateStatusSchema = z.object({
-  status: z.enum(["pending", "confirmed", "cancelled", "completed"]),
+  status: z.enum([
+    "pending_payment",
+    "pending",
+    "confirmed",
+    "cancelled",
+    "completed",
+    "payment_failed",
+  ]),
 });
+
+// ─── Server functions ─────────────────────────────────────────────────────────
 
 export const submitConsultation = createServerFn({ method: "POST" })
   .validator(serverRequestInputSchema)

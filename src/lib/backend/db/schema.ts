@@ -129,10 +129,16 @@ export const consultations = pgTable(
     fee: integer("fee"),
     date: timestamp("date", { withTimezone: true }).notNull(),
     time: text("time").notNull(),
-    status: text("status", { enum: ["pending", "confirmed", "cancelled", "completed"] })
+    status: text("status", { enum: ["pending_payment", "pending", "confirmed", "cancelled", "completed", "payment_failed"] })
       .notNull()
-      .default("pending"),
+      .default("pending_payment"),
     note: text("note"),
+    razorpayOrderId: text("razorpay_order_id"),
+    razorpayPaymentId: text("razorpay_payment_id"),
+    paymentStatus: text("payment_status"),
+    paymentVerifiedAt: timestamp("payment_verified_at", { withTimezone: true }),
+    currency: text("currency").default("INR"),
+    amountPaid: integer("amount_paid"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -153,6 +159,12 @@ export const insertConsultationSchema = z.object({
   time: z.string(),
   status: z.string().optional(),
   note: z.string().optional(),
+  razorpayOrderId: z.string().optional(),
+  razorpayPaymentId: z.string().optional(),
+  paymentStatus: z.string().optional(),
+  paymentVerifiedAt: z.coerce.date().optional(),
+  currency: z.string().optional(),
+  amountPaid: z.coerce.number().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
 });

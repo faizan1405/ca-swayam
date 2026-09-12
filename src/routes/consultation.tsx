@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CalendarIcon, Clock3, DollarSign, Loader2, Mail, MessageSquare, Phone, Send, Tag } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { CalendarIcon, Clock3, DollarSign, Loader2, Mail, MessageSquare, Phone, Send, Tag, CheckCircle2, XCircle } from "lucide-react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -18,10 +18,16 @@ import {
 import {
   Textarea,
 } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+} from "@/components/ui/card";
 import { toast } from "sonner";
 import { HeroBanner, Reveal, SectionKicker, AvailabilityBadge } from "@/components/site";
 import { getPublicSettings } from "@/lib/backend/settings";
 import { submitConsultation, listFormats } from "@/lib/backend/consultations";
+import { createPaymentOrder } from "@/lib/backend/razorpay/orders";
+import { verifyPayment } from "@/lib/backend/razorpay/verify";
 
 export const Route = createFileRoute("/consultation")({
   head: () => ({
@@ -29,12 +35,12 @@ export const Route = createFileRoute("/consultation")({
       { title: "Book a Consultation | Swayam Goyal & Associates" },
       {
         name: "description",
-        content: "Submit a consultation request to Swayam Goyal & Associates. Choose your preferred date and time.",
+        content: "Book a consultation with Swayam Goyal & Associates. Select your preferred type, date, and time.",
       },
       { property: "og:title", content: "Book a Consultation | Swayam Goyal & Associates" },
       {
         property: "og:description",
-        content: "Request a consultation with Swayam Goyal & Associates.",
+        content: "Book a consultation with Swayam Goyal & Associates.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -82,10 +88,44 @@ function ConsultationPage() {
   const [testimonials, setTestimonials] = useState<PublicTestimonial[]>([]);
   const [isActive, setIsActive] = useState(true);
 
+  // Payment flow state
+  const [bookingId, setBookingId] = useState<string | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentDetails, setPaymentDetails] = useState<{
+    consultationType: string;
+    amountPaid: number;
+    date: string;
+    time: string;
+    bookingReference: string;
+  } | null>(null);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const razorpayLoadAttempted = useRef(false);
+
   const selectedFormat = useMemo(
     () => formats.find((f) => f.id === selectedFormatId) ?? null,
     [formats, selectedFormatId],
   );
+
+  // Load Razorpay checkout script
+  useEffect(() => {
+    if (razorpayLoadAttempted.current) return;
+    razorpayLoadAttempted.current = true;
+
+    if (document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
+      setRazorpayLoaded(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => setRazorpayLoaded(true);
+    script.onerror = () => {
+      console.error("Failed to load Razorpay checkout script");
+      toast.error("Payment system could not be loaded. Please refresh.");
+    };
+    document.head.appendChild(script);
+  }, []);
 
   useEffect(() => {
     getPublicSettings()
@@ -151,7 +191,7 @@ function ConsultationPage() {
   );
   const waUrl = `https://wa.me/${phoneForWa}?text=${waMessage}`;
 
-  const validate = (): boolean => {
+  const validate = useCallback((): boolean => {
     const newErrors: FormErrors = {};
     if (!name.trim()) newErrors.name = "Name is required";
     if (!phone.trim()) {
@@ -171,10 +211,9 @@ function ConsultationPage() {
     if (!selectedTime) newErrors.time = "Please select a time";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [name, phone, email, selectedFormatId, selectedDate, selectedTime, today]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePayment = useCallback(async () => {
     if (!validate()) {
       toast.error("Please fill in all required fields correctly");
       return;
@@ -182,13 +221,14 @@ function ConsultationPage() {
 
     setSubmitting(true);
     try {
+      // Step 1: Create the booking
       const dateStr = [
         selectedDate!.getFullYear(),
         String(selectedDate!.getMonth() + 1).padStart(2, "0"),
         String(selectedDate!.getDate()).padStart(2, "0"),
       ].join("-");
 
-      const res = await submitConsultation({
+      const submitRes = await submitConsultation({
         data: {
           body: {
             name: name.trim(),
@@ -202,27 +242,288 @@ function ConsultationPage() {
         },
       });
 
-      if (res.ok) {
-        toast.success("Your consultation request has been submitted successfully!");
-        setName("");
-        setEmail("");
-        setPhone("");
-        setSelectedFormatId(formats[0]?.id ?? "");
-        setSelectedDate(undefined);
-        setSelectedTime(times[0] ?? "");
-        setMessage("");
-        setErrors({});
-      } else {
-        const data = await res.json().catch(() => ({}));
+      if (!submitRes.ok) {
+        const data = await submitRes.json().catch(() => ({}));
         const errorMsg = typeof data.error === "string" ? data.error : "Could not submit your request. Please try again.";
         toast.error(errorMsg);
+        setSubmitting(false);
+        return;
       }
+
+      const booking = await submitRes.json();
+      setBookingId(booking.id);
+
+      // Step 2: Create Razorpay order
+      const orderRes = await createPaymentOrder({
+        data: {
+          body: {
+            consultationId: booking.id,
+          },
+        },
+      });
+
+      if (!orderRes.ok) {
+        const data = await orderRes.json().catch(() => ({}));
+        const errorMsg = typeof data.error === "string" ? data.error : "Could not create payment order. Please try again.";
+        toast.error(errorMsg);
+        setSubmitting(false);
+        return;
+      }
+
+      const orderData = await orderRes.json();
+
+      // Step 3: Open Razorpay Checkout
+      if (!razorpayLoaded || !(window as unknown as Record<string, unknown>)["Razorpay"]) {
+        toast.error("Payment system not ready. Please wait a moment and try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      const RazorpayConstructor = (window as unknown as Record<string, unknown>)["Razorpay"] as {
+        new (options: Record<string, unknown>): {
+          open: () => void;
+          on: (event: string, handler: () => void) => void;
+        };
+      };
+
+      const rzp = new RazorpayConstructor({
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Swayam Goyal & Associates",
+        description: selectedFormat?.name ?? "Consultation",
+        order_id: orderData.orderId,
+        prefill: {
+          name: name.trim(),
+          email: email.trim() || undefined,
+          contact: phone.trim(),
+        },
+        theme: {
+          color: "#1a73e8",
+        },
+        handler: async (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) => {
+          try {
+            const verifyRes = await verifyPayment({
+              data: {
+                body: {
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature,
+                  consultationId: booking.id,
+                },
+              },
+            });
+
+            if (verifyRes.ok) {
+              const verifyData = await verifyRes.json();
+              if (verifyData.success) {
+                setPaymentSuccess(true);
+                setPaymentDetails({
+                  consultationType: selectedFormat?.name ?? "Consultation",
+                  amountPaid: orderData.amount / 100,
+                  date: selectedDate ? selectedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : dateStr,
+                  time: selectedTime,
+                  bookingReference: booking.id,
+                });
+                toast.success("Payment successful! Your consultation has been booked.");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              } else {
+                toast.error("Payment verification failed. Please contact support.");
+              }
+            } else {
+              const data = await verifyRes.json().catch(() => ({}));
+              toast.error(typeof data.error === "string" ? data.error : "Payment verification failed. Please contact support.");
+            }
+          } catch {
+            toast.error("Could not verify payment. Please contact support.");
+          } finally {
+            setSubmitting(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            toast.info("Payment window closed. Your booking is held for 15 minutes.");
+            setSubmitting(false);
+          },
+        },
+      });
+
+      rzp.on("payment.failed", () => {
+        toast.error("Payment failed. Please try again or contact us for assistance.");
+        setSubmitting(false);
+      });
+
+      rzp.open();
     } catch {
       toast.error("Could not reach the server. Please try again.");
-    } finally {
       setSubmitting(false);
     }
-  };
+  }, [validate, name, phone, email, selectedFormatId, selectedDate, selectedTime, message, selectedFormat, razorpayLoaded]);
+
+  const handleRetryPayment = useCallback(async () => {
+    setPaymentSuccess(false);
+    setPaymentDetails(null);
+    // The booking ID is already set, so we just need to try payment again
+    setSubmitting(true);
+    try {
+      const orderRes = await createPaymentOrder({
+        data: {
+          body: {
+            consultationId: bookingId!,
+          },
+        },
+      });
+
+      if (!orderRes.ok) {
+        const data = await orderRes.json().catch(() => ({}));
+        toast.error(typeof data.error === "string" ? data.error : "Could not create payment order.");
+        setSubmitting(false);
+        return;
+      }
+
+      const orderData = await orderRes.json();
+
+      if (!razorpayLoaded || !(window as unknown as Record<string, unknown>)["Razorpay"]) {
+        toast.error("Payment system not ready. Please wait.");
+        setSubmitting(false);
+        return;
+      }
+
+      const RazorpayConstructor = (window as unknown as Record<string, unknown>)["Razorpay"] as {
+        new (options: Record<string, unknown>): {
+          open: () => void;
+          on: (event: string, handler: () => void) => void;
+        };
+      };
+
+      const rzp = new RazorpayConstructor({
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Swayam Goyal & Associates",
+        description: selectedFormat?.name ?? "Consultation",
+        order_id: orderData.orderId,
+        prefill: {
+          name: name.trim(),
+          email: email.trim() || undefined,
+          contact: phone.trim(),
+        },
+        theme: { color: "#1a73e8" },
+        handler: async (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) => {
+          try {
+            const verifyRes = await verifyPayment({
+              data: {
+                body: {
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature,
+                  consultationId: bookingId!,
+                },
+              },
+            });
+
+            if (verifyRes.ok) {
+              const verifyData = await verifyRes.json();
+              if (verifyData.success) {
+                setPaymentSuccess(true);
+                setPaymentDetails({
+                  consultationType: selectedFormat?.name ?? "Consultation",
+                  amountPaid: orderData.amount / 100,
+                  date: selectedDate ? selectedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : "",
+                  time: selectedTime,
+                  bookingReference: bookingId!,
+                });
+                toast.success("Payment successful! Your consultation has been booked.");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }
+          } catch {
+            // handled below
+          } finally {
+            setSubmitting(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            toast.info("Payment window closed.");
+            setSubmitting(false);
+          },
+        },
+      });
+
+      rzp.on("payment.failed", () => {
+        toast.error("Payment failed. Please try again.");
+        setSubmitting(false);
+      });
+
+      rzp.open();
+    } catch {
+      toast.error("Could not reach the server. Please try again.");
+      setSubmitting(false);
+    }
+  }, [bookingId, selectedFormat, name, phone, email, razorpayLoaded]);
+
+  // Success view
+  if (paymentSuccess && paymentDetails) {
+    return (
+      <main>
+        <section className="relative flex min-h-[560px] items-center justify-center overflow-hidden bg-secondary px-6 py-24 text-secondary-foreground sm:px-10 sm:py-32 lg:px-16">
+          <HeroBanner
+            src="/consultation-room.jpg"
+            alt="Consultation room"
+          />
+          <Reveal className="relative z-10 mx-auto w-full max-w-xl text-center">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20">
+              <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="mb-4">
+              <SectionKicker>Payment Successful</SectionKicker>
+            </div>
+            <h1 className="text-3xl font-display leading-tight sm:text-4xl">
+              Your consultation request has been booked successfully.
+            </h1>
+            <p className="mt-4 text-sm text-secondary-foreground/70">
+              We will review your booking and confirm the appointment. You will receive a confirmation shortly.
+            </p>
+
+            <Card className="mt-8 text-left">
+              <CardContent className="p-6 space-y-3">
+                <BookingDetail label="Consultation Type" value={paymentDetails.consultationType} />
+                <BookingDetail label="Amount Paid" value={`${(paymentDetails.amountPaid / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                <BookingDetail label="Preferred Date" value={paymentDetails.date} />
+                <BookingDetail label="Preferred Time" value={paymentDetails.time} />
+                <BookingDetail label="Booking Reference" value={paymentDetails.bookingReference} mono />
+              </CardContent>
+            </Card>
+
+            <div className="mt-8 flex flex-col gap-3">
+              <Button
+                onClick={handleRetryPayment}
+                variant="outline"
+                className="rounded-xl border border-border px-5 py-3 text-xs font-bold uppercase tracking-[0.14em]"
+              >
+                Book Another Consultation
+              </Button>
+              <Button
+                asChild
+                className="rounded-xl bg-primary px-5 py-3 text-xs font-bold uppercase tracking-[0.14em] text-primary-foreground hover:bg-primary"
+              >
+                <a href="/">Return to Home</a>
+              </Button>
+            </div>
+          </Reveal>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main>
@@ -237,7 +538,7 @@ function ConsultationPage() {
             Request a consultation.
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-secondary-foreground/75">
-            Fill in your details and we will confirm your appointment.
+            Fill in your details and proceed to payment to confirm your appointment.
           </p>
           <div className="mt-5">
             <AvailabilityBadge isActive={isActive} />
@@ -247,7 +548,17 @@ function ConsultationPage() {
 
       <section className="px-6 py-24 sm:px-10 sm:py-32 lg:px-16">
         <div className="mx-auto max-w-2xl">
-          <form onSubmit={handleSubmit} className="mt-10 space-y-6" noValidate>
+          {/* Fee note */}
+          <Reveal className="mb-8">
+            <div className="rounded-xl border border-border bg-muted/30 px-5 py-4">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">Fee adjustable against work engaged.</span>{" "}
+                The consultation fee will be credited toward any engagement you proceed with.
+              </p>
+            </div>
+          </Reveal>
+
+          <form onSubmit={(e) => { e.preventDefault(); handlePayment(); }} className="mt-6 space-y-6" noValidate>
             {/* Name */}
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">
@@ -326,7 +637,7 @@ function ConsultationPage() {
                   >
                     <div className="flex items-center gap-2">
                       <Tag className="size-4 shrink-0 text-muted-foreground" />
-                      <SelectValue placeholder={loadingFormats ? "Loading types…" : "Select a consultation type"} />
+                      <SelectValue placeholder={loadingFormats ? "Loading types..." : "Select a consultation type"} />
                     </div>
                   </SelectTrigger>
                   <SelectContent>
@@ -339,6 +650,8 @@ function ConsultationPage() {
                               <DollarSign className="size-3" />
                               {fmt.fee.toLocaleString("en-IN")}
                             </span>
+                            {" "}
+                            {fmt.duration}
                           </span>
                         </div>
                       </SelectItem>
@@ -348,12 +661,11 @@ function ConsultationPage() {
               </div>
               {errors.type && <p role="alert" className="mt-1.5 text-xs text-destructive">{errors.type}</p>}
 
-              {/* Fee display — when a type is selected */}
               {selectedFormat && (
                 <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                   <DollarSign className="size-3.5 shrink-0 text-primary" />
                   <span>
-                    Fee: <span className="font-semibold text-foreground">{selectedFormat.fee.toLocaleString("en-IN")}</span>
+                    <span className="font-semibold text-foreground">{selectedFormat.fee.toLocaleString("en-IN")}</span>
                     {" — "}
                     {selectedFormat.note}
                     {" · "}
@@ -361,11 +673,6 @@ function ConsultationPage() {
                   </span>
                 </div>
               )}
-
-              {/* Subtle fee note */}
-              <p className="mt-1.5 text-[11px] text-muted-foreground/70">
-                Fee adjustable against work engaged.
-              </p>
             </div>
 
             {/* Preferred Date */}
@@ -458,7 +765,7 @@ function ConsultationPage() {
                 <Textarea
                   value={message}
                   onChange={(e) => { setMessage(e.target.value); }}
-                  placeholder="Briefly describe what you'd like to discuss…"
+                  placeholder="Briefly describe what you'd like to discuss..."
                   rows={3}
                   aria-label="Short message"
                   className="pl-10 min-h-[80px]"
@@ -466,7 +773,7 @@ function ConsultationPage() {
               </div>
             </div>
 
-            {/* Submit */}
+            {/* Submit / Payment Button */}
             <Button
               type="submit"
               disabled={submitting}
@@ -475,12 +782,12 @@ function ConsultationPage() {
               {submitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <Loader2 className="size-4 animate-spin" />
-                  Submitting…
+                  Processing...
                 </span>
               ) : (
                 <span className="flex items-center justify-center gap-2">
                   <Send className="size-4" />
-                  Submit Consultation Request
+                  Proceed to Payment
                 </span>
               )}
             </Button>
@@ -492,6 +799,23 @@ function ConsultationPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function BookingDetail({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-xs text-[var(--color-muted-foreground)]">{label}</span>
+      <span className={`text-sm font-medium text-right ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
+    </div>
   );
 }
 

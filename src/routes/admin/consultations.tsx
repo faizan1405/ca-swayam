@@ -35,21 +35,38 @@ type Consultation = {
   fee: number | null;
   date: string | Date;
   time: string;
-  status: "pending" | "confirmed" | "cancelled" | "completed";
+  status: "pending_payment" | "pending" | "confirmed" | "cancelled" | "completed" | "payment_failed";
   note: string | null;
   createdAt: string | Date;
   consultationType: string | null;
   consultationDuration: string | null;
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
+  paymentStatus: string | null;
+  paymentVerifiedAt: string | Date | null;
+  currency: string | null;
+  amountPaid: number | null;
 };
 
 const statusLabels: Record<
   Consultation["status"],
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" | "warning" }
 > = {
+  pending_payment: { label: "Awaiting Payment", variant: "outline" },
   pending: { label: "Pending", variant: "outline" },
   confirmed: { label: "Confirmed", variant: "default" },
   completed: { label: "Completed", variant: "secondary" },
   cancelled: { label: "Cancelled", variant: "destructive" },
+  payment_failed: { label: "Payment Failed", variant: "destructive" },
+};
+
+const paymentStatusLabels: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
+  paid: { label: "Paid", variant: "default" },
+  pending_payment: { label: "Awaiting Payment", variant: "outline" },
+  payment_failed: { label: "Failed", variant: "destructive" },
 };
 
 function ConsultationsPage() {
@@ -115,7 +132,7 @@ function ConsultationsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Consultations</h1>
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-          Manage consultation bookings
+          Manage consultation bookings and payments
         </p>
       </div>
 
@@ -137,15 +154,17 @@ function ConsultationsPage() {
                 />
               </div>
               <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-                <SelectTrigger className="sm:w-40">
+                <SelectTrigger className="sm:w-44">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="pending_payment">Awaiting Payment</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="payment_failed">Payment Failed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -154,7 +173,7 @@ function ConsultationsPage() {
         <CardContent>
           {loading ? (
             <div className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">
-              Loading…
+              Loading...
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">
@@ -166,23 +185,27 @@ function ConsultationsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Contact</TableHead>
-                    <TableHead>Consultation Type</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Fee</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Time</TableHead>
-                    <TableHead>Message</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Payment Status</TableHead>
+                    <TableHead>Amount Paid</TableHead>
+                    <TableHead>Booking Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell className="text-sm text-[var(--color-muted-foreground)]">
-                        {c.email || "—"}
+                      <TableCell className="font-medium">
+                        <div>
+                          {c.name}
+                          {c.email && (
+                            <p className="text-xs text-[var(--color-muted-foreground)]">{c.email}</p>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-[var(--color-muted-foreground)]">
                         {c.contact}
@@ -200,14 +223,45 @@ function ConsultationsPage() {
                           "—"
                         )}
                       </TableCell>
-                      <TableCell className="text-sm text-[var(--color-foreground)]">
+                      <TableCell className="text-sm">
                         {formatDate(c.date)}
                       </TableCell>
                       <TableCell className="text-sm text-[var(--color-muted-foreground)]">
                         {c.time}
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm text-[var(--color-muted-foreground)]">
-                        {c.note || "—"}
+                      <TableCell>
+                        {(() => {
+                          const ps = c.paymentStatus || c.status;
+                          const info = paymentStatusLabels[ps] ?? {
+                            label: ps,
+                            variant: "outline" as const,
+                          };
+                          return (
+                            <div className="space-y-1">
+                              <Badge variant={info.variant} className="text-[10px] h-5">
+                                {info.label}
+                              </Badge>
+                              {c.razorpayPaymentId && (
+                                <p className="text-[10px] text-[var(--color-muted-foreground)] font-mono truncate max-w-[140px]">
+                                  {c.razorpayPaymentId}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {c.amountPaid != null ? (
+                          <span className="inline-flex items-center gap-1">
+                            <IndianRupee className="size-3" />
+                            {(c.amountPaid / 100).toLocaleString("en-IN", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell>
                         <Select
@@ -216,7 +270,7 @@ function ConsultationsPage() {
                             handleStatusChange(c.id, v as Consultation["status"])
                           }
                         >
-                          <SelectTrigger className="h-7 w-32 text-xs">
+                          <SelectTrigger className="h-7 w-36 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
