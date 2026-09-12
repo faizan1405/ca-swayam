@@ -1,8 +1,8 @@
 import "@tanstack/react-start/server-only";
 
-const value = process.env.DATABASE_URL || process.env["DATABASE_URL"];
+const value = process.env.DATABASE_URL || process.env["DATABASE_URL"] || process.env.DB_URL || process.env["DB_URL"];
 if (!value) {
-  console.error("CRITICAL ERROR: DATABASE_URL is undefined at runtime! process.env keys:", Object.keys(process.env).join(", "));
+  throw new Error("DATABASE_URL or DB_URL must be set in Vercel Environment Variables");
 }
 
-export const DATABASE_URL = value || "postgresql://dummy:dummy@dummy/dummy";
+export const DATABASE_URL = value;
