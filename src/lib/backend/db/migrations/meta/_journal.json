@@ -8,6 +8,20 @@
       "when": 1788870505875,
       "tag": "0000_ancient_randall",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788870506000,
+      "tag": "0002_add_consultation_fee",
+      "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789200106958,
+      "tag": "0002_add-email-to-consultations",
+      "breakpoints": true
     }
   ]
 }

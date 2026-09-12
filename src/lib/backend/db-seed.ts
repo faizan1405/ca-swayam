@@ -25,9 +25,9 @@ const seedTestimonials = [
   { id: "tst_3", quote: "Bank audit and project-profile support from the firm has been professional and accurate. They understand the operational realities of a contracting firm.", name: "Managing Director", place: "Contracting Firm, Ambikapur", sortOrder: 3 },
 ];
 const seedFormats = [
-  { id: "fmt_phone", name: "Phone Call", shortName: "Phone", duration: "10-20 min", fee: 500, note: "Direct phone call", sortOrder: 1 },
-  { id: "fmt_face", name: "Face-to-Face (office)", shortName: "Face-to-Face", duration: "10-20 min", fee: 1000, note: "At the office", sortOrder: 2 },
-  { id: "fmt_video", name: "Video Conference", shortName: "Video", duration: "10-20 min", fee: 1000, note: "Online meeting", sortOrder: 3 },
+  { id: "fmt_phone", name: "20-min Phone Call", shortName: "Phone", duration: "20 min", fee: 500, note: "Direct phone call", sortOrder: 1 },
+  { id: "fmt_video", name: "45-min Video Call", shortName: "Video", duration: "45 min", fee: 1000, note: "Online video meeting", sortOrder: 2 },
+  { id: "fmt_subsidy", name: "Subsidy Roadmap Session (60 min)", shortName: "Subsidy Roadmap", duration: "60 min", fee: 5000, note: "In-depth subsidy roadmap", sortOrder: 3 },
 ];
 const seedSettings = [
   ["firm_name", "Swayam Goyal & Associates", "text"], ["firm_tagline", "Chartered Accountants", "text"],

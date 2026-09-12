@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CalendarIcon, Clock3, Loader2, MessageSquare, Phone, Send } from "lucide-react";
+import { CalendarIcon, Clock3, DollarSign, Loader2, Mail, MessageSquare, Phone, Send, Tag } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +21,7 @@ import {
 import { toast } from "sonner";
 import { HeroBanner, Reveal, SectionKicker, AvailabilityBadge } from "@/components/site";
 import { getPublicSettings } from "@/lib/backend/settings";
-import { submitConsultation } from "@/lib/backend/consultations";
+import { submitConsultation, listFormats } from "@/lib/backend/consultations";
 
 export const Route = createFileRoute("/consultation")({
   head: () => ({
@@ -43,20 +43,35 @@ export const Route = createFileRoute("/consultation")({
   component: ConsultationPage,
 });
 
+type ConsultationFormat = {
+  id: string;
+  name: string;
+  shortName: string;
+  duration: string;
+  fee: number;
+  note: string;
+  sortOrder: number;
+  isActive: boolean;
+};
+
 type PublicTestimonial = { id: string; quote: string; name: string; place: string };
 type PublicSettings = Record<string, { value: string; type: string }>;
 
 const DEFAULT_TIMES = ["10:00 AM", "11:30 AM", "02:00 PM", "04:30 PM"];
 const DEFAULT_WA_NUMBER = "919617072100";
 
-type FormErrors = Partial<Record<"name" | "phone" | "date" | "time", string>>;
+type FormErrors = Partial<Record<"name" | "phone" | "email" | "type" | "date" | "time", string>>;
 
 function ConsultationPage() {
+  const [formats, setFormats] = useState<ConsultationFormat[]>([]);
+  const [loadingFormats, setLoadingFormats] = useState(true);
   const [times, setTimes] = useState<string[]>(DEFAULT_TIMES);
   const [phoneForWa, setPhoneForWa] = useState(DEFAULT_WA_NUMBER);
 
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [selectedFormatId, setSelectedFormatId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [message, setMessage] = useState("");
@@ -66,6 +81,11 @@ function ConsultationPage() {
 
   const [testimonials, setTestimonials] = useState<PublicTestimonial[]>([]);
   const [isActive, setIsActive] = useState(true);
+
+  const selectedFormat = useMemo(
+    () => formats.find((f) => f.id === selectedFormatId) ?? null,
+    [formats, selectedFormatId],
+  );
 
   useEffect(() => {
     getPublicSettings()
@@ -92,7 +112,7 @@ function ConsultationPage() {
       .then(({ getPublicTestimonials }) =>
         getPublicTestimonials()
           .then((res) => res.json())
-          .then((data: PublicTestimonial[]) => setTestimonials(Array.isArray(data) ? data : [])),
+          .then((data: PublicTestimonial[] | undefined) => setTestimonials(Array.isArray(data) ? data : [])),
       )
       .catch(() => {});
 
@@ -105,6 +125,19 @@ function ConsultationPage() {
           }),
       )
       .catch(() => {});
+
+    listFormats()
+      .then((res) => res.json())
+      .then((data: ConsultationFormat[]) => {
+        setFormats(data);
+        setLoadingFormats(false);
+        if (data.length > 0 && !selectedFormatId) {
+          setSelectedFormatId(data[0]!.id);
+        }
+      })
+      .catch(() => {
+        setLoadingFormats(false);
+      });
   }, []);
 
   const today = useMemo(() => {
@@ -126,6 +159,10 @@ function ConsultationPage() {
     } else if (phone.trim().length < 10 || !/^\+?[\d\s()-]+$/.test(phone.trim())) {
       newErrors.phone = "Please enter a valid phone number";
     }
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = "Please enter a valid email address";
+    }
+    if (!selectedFormatId) newErrors.type = "Please select a consultation type";
     if (!selectedDate) {
       newErrors.date = "Please select a date";
     } else if (selectedDate < today) {
@@ -156,6 +193,8 @@ function ConsultationPage() {
           body: {
             name: name.trim(),
             contact: phone.trim(),
+            email: email.trim() || undefined,
+            formatId: selectedFormatId,
             date: dateStr,
             time: selectedTime,
             note: message.trim() || undefined,
@@ -166,7 +205,9 @@ function ConsultationPage() {
       if (res.ok) {
         toast.success("Your consultation request has been submitted successfully!");
         setName("");
+        setEmail("");
         setPhone("");
+        setSelectedFormatId(formats[0]?.id ?? "");
         setSelectedDate(undefined);
         setSelectedTime(times[0] ?? "");
         setMessage("");
@@ -175,7 +216,6 @@ function ConsultationPage() {
         const data = await res.json().catch(() => ({}));
         const errorMsg = typeof data.error === "string" ? data.error : "Could not submit your request. Please try again.";
         toast.error(errorMsg);
-        // Don't reset the form on error
       }
     } catch {
       toast.error("Could not reach the server. Please try again.");
@@ -244,6 +284,88 @@ function ConsultationPage() {
                 />
               </div>
               {errors.phone && <p role="alert" className="mt-1.5 text-xs text-destructive">{errors.phone}</p>}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">
+                Email <span className="text-muted-foreground">(Optional)</span>
+              </label>
+              <div className="mt-2 relative">
+                <Mail className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors((prev) => ({ ...prev, email: "" })); }}
+                  placeholder="your@email.com"
+                  aria-label="Email"
+                  aria-invalid={!!errors.email}
+                  className={`h-12 w-full rounded-xl border bg-background pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-ring ${errors.email ? "border-destructive" : "border-input"}`}
+                />
+              </div>
+              {errors.email && <p role="alert" className="mt-1.5 text-xs text-destructive">{errors.email}</p>}
+            </div>
+
+            {/* Consultation Type */}
+            <div>
+              <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">
+                Consultation Type <span className="text-destructive">*</span>
+              </label>
+              <div className="mt-2">
+                <Select
+                  value={selectedFormatId}
+                  onValueChange={(val) => {
+                    setSelectedFormatId(val);
+                    if (errors.type) setErrors((prev) => ({ ...prev, type: "" }));
+                  }}
+                  disabled={loadingFormats}
+                >
+                  <SelectTrigger
+                    aria-invalid={!!errors.type}
+                    className={errors.type ? "border-destructive" : ""}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Tag className="size-4 shrink-0 text-muted-foreground" />
+                      <SelectValue placeholder={loadingFormats ? "Loading types…" : "Select a consultation type"} />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formats.map((fmt) => (
+                      <SelectItem key={fmt.id} value={fmt.id}>
+                        <div className="flex flex-col">
+                          <span>{fmt.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1">
+                              <DollarSign className="size-3" />
+                              {fmt.fee.toLocaleString("en-IN")}
+                            </span>
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {errors.type && <p role="alert" className="mt-1.5 text-xs text-destructive">{errors.type}</p>}
+
+              {/* Fee display — when a type is selected */}
+              {selectedFormat && (
+                <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  <DollarSign className="size-3.5 shrink-0 text-primary" />
+                  <span>
+                    Fee: <span className="font-semibold text-foreground">{selectedFormat.fee.toLocaleString("en-IN")}</span>
+                    {" — "}
+                    {selectedFormat.note}
+                    {" · "}
+                    {selectedFormat.duration}
+                  </span>
+                </div>
+              )}
+
+              {/* Subtle fee note */}
+              <p className="mt-1.5 text-[11px] text-muted-foreground/70">
+                Fee adjustable against work engaged.
+              </p>
             </div>
 
             {/* Preferred Date */}
@@ -326,19 +448,19 @@ function ConsultationPage() {
               {errors.time && <p role="alert" className="mt-1.5 text-xs text-destructive">{errors.time}</p>}
             </div>
 
-            {/* Message / Note */}
+            {/* Short Message / Note */}
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">
-                Message <span className="text-muted-foreground">(optional)</span>
+                Short Message <span className="text-muted-foreground">(optional)</span>
               </label>
               <div className="mt-2 relative">
                 <MessageSquare className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" />
                 <Textarea
                   value={message}
                   onChange={(e) => { setMessage(e.target.value); }}
-                  placeholder="Briefly describe what you'd like to discuss..."
+                  placeholder="Briefly describe what you'd like to discuss…"
                   rows={3}
-                  aria-label="Message"
+                  aria-label="Short message"
                   className="pl-10 min-h-[80px]"
                 />
               </div>

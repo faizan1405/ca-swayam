@@ -123,8 +123,10 @@ export const consultations = pgTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     contact: text("contact").notNull(),
+    email: text("email"),
     formatId: text("format_id")
       .references(() => consultationFormats.id),
+    fee: integer("fee"),
     date: timestamp("date", { withTimezone: true }).notNull(),
     time: text("time").notNull(),
     status: text("status", { enum: ["pending", "confirmed", "cancelled", "completed"] })
@@ -144,7 +146,9 @@ export const insertConsultationSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1),
   contact: z.string().min(1),
+  email: z.string().optional(),
   formatId: z.string().optional(),
+  fee: z.coerce.number().optional(),
   date: z.coerce.date(),
   time: z.string(),
   status: z.string().optional(),

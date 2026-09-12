@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Trash2, Search } from "lucide-react";
+import { IndianRupee, Trash2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,12 +30,16 @@ type Consultation = {
   id: string;
   name: string;
   contact: string;
-  formatId: string;
+  email: string | null;
+  formatId: string | null;
+  fee: number | null;
   date: string | Date;
   time: string;
   status: "pending" | "confirmed" | "cancelled" | "completed";
   note: string | null;
   createdAt: string | Date;
+  consultationType: string | null;
+  consultationDuration: string | null;
 };
 
 const statusLabels: Record<
@@ -99,7 +103,11 @@ function ConsultationsPage() {
   const filtered = items.filter((item) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return item.name.toLowerCase().includes(q) || item.contact.toLowerCase().includes(q);
+    return (
+      item.name.toLowerCase().includes(q) ||
+      item.contact.toLowerCase().includes(q) ||
+      (item.consultationType ?? "").toLowerCase().includes(q)
+    );
   });
 
   return (
@@ -122,7 +130,7 @@ function ConsultationsPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted-foreground)]" />
                 <Input
-                  placeholder="Search name or contact"
+                  placeholder="Search name, contact, or type"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9 sm:w-64"
@@ -158,10 +166,13 @@ function ConsultationsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Contact</TableHead>
+                    <TableHead>Consultation Type</TableHead>
+                    <TableHead>Fee</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Time</TableHead>
-                    <TableHead>Note</TableHead>
+                    <TableHead>Message</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -171,7 +182,23 @@ function ConsultationsPage() {
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell className="text-sm text-[var(--color-muted-foreground)]">
+                        {c.email || "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-[var(--color-muted-foreground)]">
                         {c.contact}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {c.consultationType || "—"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {c.fee != null ? (
+                          <span className="inline-flex items-center gap-1">
+                            <IndianRupee className="size-3" />
+                            {c.fee.toLocaleString("en-IN")}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-[var(--color-foreground)]">
                         {formatDate(c.date)}

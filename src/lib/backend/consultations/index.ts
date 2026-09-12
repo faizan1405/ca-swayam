@@ -43,6 +43,17 @@ async function submitConsultationHandler(request: Request) {
     );
   }
 
+  // Validate format and determine fee server-side
+  const [format] = await db
+    .select({ fee: consultationFormats.fee })
+    .from(consultationFormats)
+    .where(eq(consultationFormats.id, parsed.data.formatId))
+    .limit(1);
+
+  if (!format) {
+    return Response.json({ error: "Invalid consultation type selected" }, { status: 400 });
+  }
+
   const id = "cons_" + Math.random().toString(36).slice(2);
   const now = new Date();
   const [result] = await db
@@ -51,7 +62,9 @@ async function submitConsultationHandler(request: Request) {
       id,
       name: parsed.data.name,
       contact: parsed.data.contact,
-      ...(parsed.data.formatId ? { formatId: parsed.data.formatId } : {}),
+      email: parsed.data.email ?? null,
+      formatId: parsed.data.formatId,
+      fee: format.fee,
       date: consultationDate,
       time: parsed.data.time,
       status: "pending",
@@ -80,8 +93,24 @@ async function listConsultationsHandler(request: Request) {
     : [];
 
   const rows = await db
-    .select()
+    .select({
+      id: consultations.id,
+      name: consultations.name,
+      contact: consultations.contact,
+      email: consultations.email,
+      formatId: consultations.formatId,
+      fee: consultations.fee,
+      date: consultations.date,
+      time: consultations.time,
+      status: consultations.status,
+      note: consultations.note,
+      createdAt: consultations.createdAt,
+      updatedAt: consultations.updatedAt,
+      consultationType: consultationFormats.name,
+      consultationDuration: consultationFormats.duration,
+    })
     .from(consultations)
+    .leftJoin(consultationFormats, eq(consultations.formatId, consultationFormats.id))
     .where(conditions.length ? conditions[0] : undefined)
     .orderBy(desc(consultations.createdAt))
     .limit(limit)
@@ -170,7 +199,11 @@ async function listFormatsHandler() {
 const consultationSubmitSchema = z.object({
   name: z.string().min(1).max(255),
   contact: z.string().min(1).max(255),
-  formatId: z.string().optional(),
+  email: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().email().optional(),
+  ),
+  formatId: z.string().min(1),
   date: z.string().min(1),
   time: z.string().min(1),
   note: z.string().optional(),
