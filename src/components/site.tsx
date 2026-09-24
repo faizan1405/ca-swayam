@@ -544,6 +544,26 @@ export function SiteFooter({
         </span>
         <span>© 2026 Swayam Goyal &amp; Associates</span>
       </div>
+      <p className="mt-4 text-center text-[10px] tracking-[0.16em] text-secondary-foreground/35 sm:mt-0">
+        Designed by{' '}
+        <a
+          href="https://www.joinscaleflow.in/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-secondary-foreground/50 underline underline-offset-2 transition-colors hover:text-secondary-foreground/70"
+        >
+          Scale Flow
+        </a>
+        {' and '}
+        <a
+          href="https://rankzio.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-secondary-foreground/50 underline underline-offset-2 transition-colors hover:text-secondary-foreground/70"
+        >
+          Rank Zio
+        </a>
+      </p>
     </footer>
   );
 }
